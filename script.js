@@ -13,7 +13,7 @@ const queryString = window.location.search;
 const urlParams = new URLSearchParams(queryString);
 
 const apiKey = urlParams.get("apiKey") || "<Open Weather API Key>";
-const cityId = urlParams.get("cityId") || "2759794";
+const cityId = urlParams.get("cityId") || "4076598";
 
 let xapi;
 let meetingRoomName = "Testing";
