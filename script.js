@@ -289,7 +289,7 @@ function getWeather() {
   };
 
   return fetch(
-    `https://api.openweathermap.org/data/2.5/weather?id=${cityId}&appid=${apiKey}`,
+    `https://api.openweathermap.org/data/2.5/weather?q=Mobile,al&appid=${apiKey}`,
     requestOptions
   )
     .then((response) => response.text())
