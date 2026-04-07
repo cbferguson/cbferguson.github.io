@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>C Spire · Customer Screen Pop</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%23074A75'/><text x='16' y='22' text-anchor='middle' font-size='18' font-weight='700' fill='white' font-family='Arial'>C</text></svg>">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --cspire-cerulean: #00B5F0;
+    --cspire-blue: #074A75;
+    --cspire-dark: #053A5C;
+    --cspire-light: #33C7F5;
+    --bg: #F4F6F8;
+    --surface: #FFFFFF;
+    --surface-alt: #F7F9FB;
+    --border: rgba(0,0,0,0.07);
+    --text-primary: #111827;
+    --text-secondary: #4B5563;
+    --text-muted: #9CA3AF;
+    --shadow-lg: 0 20px 60px rgba(7,74,117,0.1), 0 4px 12px rgba(0,0,0,0.03);
+    --radius: 14px;
+    --radius-sm: 8px;
+    --radius-xs: 6px;
+  }
+
+  body {
+    font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text-primary);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    position: relative;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse at 20% 0%, rgba(0,181,240,0.04) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 100%, rgba(7,74,117,0.04) 0%, transparent 50%);
+    pointer-events: none;
+  }
+
+  /* Loading */
+  .loader-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 18px;
+    animation: fadeIn 0.3s ease;
+  }
+  .loader-ring {
+    width: 40px;
+    height: 40px;
+    border: 3px solid rgba(0,181,240,0.15);
+    border-top-color: var(--cspire-cerulean);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  .loader-text {
+    color: var(--text-secondary);
+    font-size: 14px;
+    font-weight: 500;
+  }
+
+  /* Error */
+  .error-container {
+    text-align: center;
+    animation: fadeIn 0.4s ease;
+    max-width: 360px;
+  }
+  .error-icon {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    background: #FEF2F2;
+    border: 1px solid #FECACA;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 14px;
+    color: #EF4444;
+    font-size: 20px;
+    font-weight: 700;
+  }
+  .error-title {
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+  .error-msg {
+    color: var(--text-secondary);
+    font-size: 13px;
+    line-height: 1.6;
+  }
+  .error-detail {
+    margin-top: 14px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text-muted);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-xs);
+    padding: 10px 14px;
+    display: inline-block;
+  }
+
+  /* Card */
+  .card {
+    width: 100%;
+    max-width: 440px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    overflow: hidden;
+    animation: slideUp 0.55s cubic-bezier(0.16,1,0.3,1);
+    box-shadow: var(--shadow-lg);
+  }
+
+  /* Brand bar — C Spire deep blue */
+  .brand-bar {
+    background: linear-gradient(135deg, var(--cspire-dark) 0%, var(--cspire-blue) 50%, #0960A0 100%);
+    padding: 14px 22px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: relative;
+    overflow: hidden;
+  }
+  .brand-bar::after {
+    content: '';
+    position: absolute;
+    top: -60%;
+    right: -15%;
+    width: 55%;
+    height: 220%;
+    background: radial-gradient(ellipse, rgba(0,181,240,0.08) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .brand-logo-text {
+    font-size: 22px;
+    font-weight: 800;
+    color: #fff;
+    letter-spacing: -0.03em;
+    position: relative;
+    z-index: 1;
+  }
+  .queue-label {
+    font-size: 11px;
+    font-weight: 500;
+    color: rgba(255,255,255,0.5);
+    letter-spacing: 0.02em;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Status strip */
+  .status-strip {
+    padding: 10px 22px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--surface-alt);
+    border-bottom: 1px solid var(--border);
+  }
+  .live-indicator {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+  }
+  .live-dot-outer {
+    width: 18px;
+    height: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: rgba(0,181,240,0.1);
+  }
+  .live-dot {
+    width: 7px;
+    height: 7px;
+    background: var(--cspire-cerulean);
+    border-radius: 50%;
+    animation: pulse 2s ease infinite;
+  }
+  .live-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--cspire-blue);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .status-time {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text-muted);
+    font-weight: 500;
+  }
+
+  /* Customer hero */
+  .customer-hero {
+    padding: 22px 22px 18px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .avatar {
+    width: 56px;
+    height: 56px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, var(--cspire-blue) 0%, var(--cspire-cerulean) 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 19px;
+    font-weight: 800;
+    color: #fff;
+    flex-shrink: 0;
+    letter-spacing: -0.02em;
+    box-shadow: 0 4px 14px rgba(0,181,240,0.25);
+  }
+  .hero-info { flex: 1; min-width: 0; }
+  .customer-name {
+    font-size: 21px;
+    font-weight: 800;
+    letter-spacing: -0.025em;
+    line-height: 1.2;
+    margin-bottom: 5px;
+  }
+  .customer-acct {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--cspire-blue);
+    background: rgba(0,181,240,0.07);
+    border: 1px solid rgba(0,181,240,0.15);
+    padding: 3px 10px;
+    border-radius: 6px;
+  }
+  .customer-acct svg { flex-shrink: 0; }
+
+  /* Details */
+  .details { padding: 4px 0; }
+  .detail-row {
+    display: flex;
+    align-items: flex-start;
+    padding: 13px 22px;
+    gap: 14px;
+    transition: background 0.15s ease;
+  }
+  .detail-row:hover { background: rgba(0,181,240,0.02); }
+  .detail-icon-wrap {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    background: var(--surface-alt);
+    border: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+  .detail-icon-wrap svg {
+    width: 16px;
+    height: 16px;
+    stroke: var(--cspire-blue);
+    fill: none;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    opacity: 0.7;
+  }
+  .detail-content { flex: 1; min-width: 0; }
+  .detail-label {
+    font-size: 10.5px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--text-muted);
+    margin-bottom: 3px;
+  }
+  .detail-value {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+    line-height: 1.45;
+  }
+  .detail-value.mono {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    letter-spacing: 0.03em;
+    font-weight: 500;
+  }
+  .pin-chars {
+    display: inline-flex;
+    gap: 4px;
+  }
+  .pin-char {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 32px;
+    background: var(--surface-alt);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  /* Footer */
+  .card-footer {
+    padding: 12px 22px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--surface-alt);
+  }
+  .footer-powered {
+    font-size: 10.5px;
+    color: var(--text-muted);
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .footer-powered .webex-label {
+    font-weight: 700;
+    color: var(--text-secondary);
+  }
+  .footer-id {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10.5px;
+    color: var(--text-muted);
+    font-weight: 500;
+  }
+
+  /* Animations */
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.25; }
+  }
+  .detail-row { animation: fadeIn 0.35s ease backwards; }
+  .detail-row:nth-child(1) { animation-delay: 0.12s; }
+  .detail-row:nth-child(2) { animation-delay: 0.2s; }
+  .detail-row:nth-child(3) { animation-delay: 0.28s; }
+  .detail-row:nth-child(4) { animation-delay: 0.36s; }
+
+  @media (max-width: 480px) {
+    body { padding: 12px; }
+    .card { border-radius: 14px; }
+    .customer-name { font-size: 18px; }
+    .brand-bar, .status-strip, .customer-hero, .detail-row, .card-footer {
+      padding-left: 16px;
+      padding-right: 16px;
+    }
+  }
+</style>
+</head>
+<body>
+
+<div id="app">
+  <div class="loader-container">
+    <div class="loader-ring"></div>
+    <div class="loader-text">Looking up customer…</div>
+  </div>
+</div>
+
+<script>
+const API_BASE = 'https://67fad7058ee14a542628b6d7.mockapi.io/userDB';
+const app = document.getElementById('app');
+
+function getParams() {
+  const p = new URLSearchParams(window.location.search);
+  return {
+    phoneNumber: p.get('phoneNumber') || p.get('ANI') || p.get('ani') || '',
+    agentName: p.get('AgentName') || p.get('agentName') || '',
+    queueName: p.get('QueueName') || p.get('queueName') || '',
+    interactionId: p.get('InteractionID') || p.get('interactionId') || ''
+  };
+}
+
+function normalizePhone(raw) {
+  const digits = raw.replace(/\D/g, '');
+  if (digits.length === 11 && digits.startsWith('1')) return digits.slice(1);
+  if (digits.length === 10) return digits;
+  return digits;
+}
+
+function formatPhone(d) {
+  return d.length === 10 ? `(${d.slice(0,3)}) ${d.slice(3,6)}-${d.slice(6)}` : d;
+}
+
+function initials(name) {
+  return name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0,2);
+}
+
+function timeNow() {
+  return new Date().toLocaleTimeString('en-US', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+}
+
+function showError(title, msg, detail) {
+  app.innerHTML = `
+    <div class="error-container">
+      <div class="error-icon">!</div>
+      <div class="error-title">${title}</div>
+      <div class="error-msg">${msg}</div>
+      ${detail ? `<div class="error-detail">${detail}</div>` : ''}
+    </div>`;
+}
+
+function pinHTML(pin) {
+  return pin.split('').map(c => `<span class="pin-char">${c}</span>`).join('');
+}
+
+function render(c, params) {
+  const digits = normalizePhone(c.phoneNumber);
+  const ini = initials(c.name);
+  const queue = params.queueName || 'Customer Assist';
+  const intId = params.interactionId ? params.interactionId.slice(0,14) : 'CA-' + c.id.padStart(5,'0');
+
+  app.innerHTML = `
+    <div class="card">
+      <div class="brand-bar">
+        <div class="brand-logo-text"><img src="https://cbferguson.github.io/images/CSB_Logo_cyan_stacked_resized.jpg" alt="C Spire" height="40" style="display:block;"></div>
+        <span class="queue-label">${queue}</span>
+      </div>
+
+      <div class="status-strip">
+        <div class="live-indicator">
+          <div class="live-dot-outer"><div class="live-dot"></div></div>
+          <span class="live-label">Inbound Call</span>
+        </div>
+        <span class="status-time">${timeNow()}</span>
+      </div>
+
+      <div class="customer-hero">
+        <div class="avatar">${ini}</div>
+        <div class="hero-info">
+          <div class="customer-name">${c.name}</div>
+          <div class="customer-acct">
+            <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
+            ${c.acctName}
+          </div>
+        </div>
+      </div>
+
+      <div class="details">
+        <div class="detail-row">
+          <div class="detail-icon-wrap">
+            <svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6A19.79 19.79 0 012.12 4.18 2 2 0 014.11 2h3a2 2 0 012 1.72c.13.81.37 1.6.7 2.35a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.75.33 1.54.57 2.35.7A2 2 0 0122 16.92z"/></svg>
+          </div>
+          <div class="detail-content">
+            <div class="detail-label">Phone Number</div>
+            <div class="detail-value mono">${formatPhone(digits)}</div>
+          </div>
+        </div>
+
+        <div class="detail-row">
+          <div class="detail-icon-wrap">
+            <svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          </div>
+          <div class="detail-content">
+            <div class="detail-label">Address</div>
+            <div class="detail-value">${c.addressStreet}<br>${c.addressCity}, ${c.addressState}</div>
+          </div>
+        </div>
+
+        <div class="detail-row">
+          <div class="detail-icon-wrap">
+            <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+          </div>
+          <div class="detail-content">
+            <div class="detail-label">Security PIN</div>
+            <div class="detail-value"><div class="pin-chars">${pinHTML(c.pin)}</div></div>
+          </div>
+        </div>
+
+        <div class="detail-row">
+          <div class="detail-icon-wrap">
+            <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          </div>
+          <div class="detail-content">
+            <div class="detail-label">Customer ID</div>
+            <div class="detail-value mono">#${c.id.padStart(5,'0')}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card-footer">
+        <div class="footer-powered">Powered by <span class="webex-label">Webex</span> Customer Assist</div>
+        <div class="footer-id">${intId}</div>
+      </div>
+    </div>`;
+}
+
+async function init() {
+  const params = getParams();
+
+  if (!params.phoneNumber) {
+    showError('No Caller ID Received', 'No phone number was provided in the URL parameters.', 'Expected: ?phoneNumber=+1XXXXXXXXXX');
+    return;
+  }
+
+  const normalized = normalizePhone(params.phoneNumber);
+
+  try {
+    const res = await fetch(API_BASE);
+    if (!res.ok) throw new Error('API returned ' + res.status);
+    const data = await res.json();
+    const match = data.find(r => normalizePhone(r.phoneNumber) === normalized);
+
+    if (match) {
+      render(match, params);
+    } else {
+      showError('Customer Not Found', 'No matching record was found for this caller.', `ANI: ${params.phoneNumber} → ${normalized}`);
+    }
+  } catch (err) {
+    showError('Connection Error', 'Unable to reach the customer database.', err.message);
+  }
+}
+
+init();
+</script>
+</body>
+</html>
