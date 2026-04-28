@@ -1,0 +1,54 @@
+{
+  "businessHours": {
+    "version": "1.0",
+    "generatedAt": "2026-04-28T12:00:00.000Z",
+    "generatedBy": "WxCC Business Hours Editor",
+    "locations": {
+      "loc_main": {
+        "scheduleName": "API-Hours",
+        "timezone": "America/Chicago",
+        "shifts": [
+          {
+            "day": "monday",
+            "startTime": "08:00",
+            "endTime": "16:00",
+            "open": true
+          },
+          {
+            "day": "tuesday",
+            "startTime": "08:00",
+            "endTime": "16:00",
+            "open": true
+          },
+          {
+            "day": "wednesday",
+            "startTime": "08:00",
+            "endTime": "16:00",
+            "open": true
+          },
+          {
+            "day": "thursday",
+            "startTime": "08:00",
+            "endTime": "16:00",
+            "open": true
+          },
+          {
+            "day": "friday",
+            "startTime": "09:00",
+            "endTime": "13:00",
+            "open": true
+          },
+          {
+            "day": "saturday",
+            "open": false
+          },
+          {
+            "day": "sunday",
+            "open": false
+          }
+        ],
+        "lastModified": "2026-04-28T12:00:00.000Z"
+      }
+    }
+  }
+}
