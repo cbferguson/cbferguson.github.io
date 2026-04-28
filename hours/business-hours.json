@@ -1,10 +1,10 @@
 {
   "businessHours": {
     "version": "1.0",
-    "generatedAt": "2026-04-28T12:00:00.000Z",
+    "generatedAt": "2026-04-28T20:52:40.895Z",
     "generatedBy": "WxCC Business Hours Editor",
     "locations": {
-      "loc_main": {
+      "loc_r34s0tzf7": {
         "scheduleName": "API-Hours",
         "timezone": "America/Chicago",
         "shifts": [
@@ -47,7 +47,7 @@
             "open": false
           }
         ],
-        "lastModified": "2026-04-28T12:00:00.000Z"
+        "lastModified": "2026-04-28T20:52:40.895Z"
       }
     }
   }
