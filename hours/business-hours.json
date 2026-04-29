@@ -8,13 +8,13 @@
       "name": "Shift-1",
       "days": ["MON", "TUE", "WED", "THU"],
       "startTime": "08:00",
-      "endTime": "14:00"
+      "endTime": "17:00"
     },
     {
       "name": "Shift-2",
       "days": ["FRI"],
-      "startTime": "09:00",
-      "endTime": "13:00"
+      "startTime": "08:00",
+      "endTime": "12:00"
     }
   ]
 }
