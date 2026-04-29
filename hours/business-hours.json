@@ -1,14 +1,13 @@
 {
   "businessHours": {
     "version": "1.0",
-    "generatedAt": "2026-04-29T13:15:42.104Z",
+    "generatedAt": "2026-04-29T12:00:00.000Z",
     "generatedBy": "WxCC Business Hours Editor",
     "locations": {
       "main": {
-        "organizationId": "4fe2be14-6577-49a2-9f2b-287eaea60f8e",
         "id": "7fd288d2-71e7-4d58-ba8a-067406e85adc",
-        "name": "API-Hours",
-        "description": "Monday thru Friday Open Hours",
+        "name": "Standard_Business_Hours_API",
+        "description": "Monday thru Friday Open Hours updated via API",
         "timezone": "America/Chicago",
         "workingHours": [
           {
@@ -30,9 +29,7 @@
             "startTime": "09:00",
             "endTime": "13:00"
           }
-        ],
-        "holidaysId": "f80a8cd1-2b40-4003-b007-3a7a3c1a1200",
-        "lastModified": "2026-04-29T13:15:42.104Z"
+        ]
       }
     }
   }
