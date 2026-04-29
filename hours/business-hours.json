@@ -1,7 +1,7 @@
 {
   "id": "7fd288d2-71e7-4d58-ba8a-067406e85adc",
-  "name": "API-Hours",
-  "description": "Monday thru Friday Open Hours",
+  "name": "Standard_Business_Hours",
+  "description": "Monday thru Friday Open Hours updated via API",
   "timezone": "America/Chicago",
   "workingHours": [
     {
