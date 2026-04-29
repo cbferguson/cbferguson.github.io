@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WxCC Business Hours Manager</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0b0e17;
+    --surface: #111625;
+    --surface2: #161b2e;
+    --border: #1e2540;
+    --border-active: #3b82f6;
+    --text: #e1e7f0;
+    --text-dim: #5a6580;
+    --text-muted: #3d4660;
+    --accent: #3b82f6;
+    --accent-glow: rgba(59, 130, 246, 0.15);
+    --success: #22c55e;
+    --success-bg: rgba(34, 197, 94, 0.1);
+    --danger: #ef4444;
+    --danger-bg: rgba(239, 68, 68, 0.1);
+    --warning: #f59e0b;
+    --mono: 'DM Mono', 'Consolas', monospace;
+    --sans: 'DM Sans', system-ui, sans-serif;
+    --radius: 10px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: var(--sans);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ── Layout ── */
+  .shell { max-width: 740px; margin: 0 auto; padding: 0 24px 80px; }
+
+  header {
+    padding: 32px 0 28px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 32px;
+  }
+  header h1 {
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  header h1::before {
+    content: '';
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 10px var(--accent);
+  }
+  header p { font-size: 13px; color: var(--text-dim); margin-top: 4px; }
+
+  /* ── Cards ── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin-bottom: 16px;
+    overflow: hidden;
+    transition: border-color 0.2s;
+  }
+  .card:hover { border-color: #2a3355; }
+
+  .card-header {
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    user-select: none;
+  }
+  .card-header:hover { background: rgba(59, 130, 246, 0.03); }
+
+  .card-title {
+    font-size: 15px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .badge {
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    padding: 3px 8px;
+    border-radius: 4px;
+  }
+  .badge-open { background: var(--success-bg); color: var(--success); }
+  .badge-closed { background: var(--danger-bg); color: var(--danger); }
+
+  .card-body { padding: 0 20px 20px; }
+  .card-body .divider { height: 1px; background: var(--border); margin-bottom: 20px; }
+
+  /* ── Form ── */
+  .field { margin-bottom: 18px; }
+  .field label {
+    display: block;
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--text-dim);
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .field input, .field select {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    padding: 10px 14px;
+    font-size: 14px;
+    font-family: var(--mono);
+    outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .field input:focus, .field select:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-glow);
+  }
+  .field select { cursor: pointer; }
+  .field select option { background: var(--surface); }
+
+  .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+
+  /* ── Day Rows ── */
+  .day-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    border-radius: 8px;
+    transition: all 0.15s;
+    margin-bottom: 4px;
+  }
+  .day-row.active {
+    background: rgba(59, 130, 246, 0.04);
+    border-left: 3px solid var(--accent);
+  }
+  .day-row.inactive {
+    border-left: 3px solid transparent;
+    opacity: 0.5;
+  }
+
+  .day-toggle {
+    width: 18px; height: 18px;
+    border-radius: 4px;
+    border: 2px solid var(--text-muted);
+    background: transparent;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+    flex-shrink: 0;
+    padding: 0;
+  }
+  .day-toggle.on {
+    border: none;
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+  }
+  .day-toggle svg { display: none; }
+  .day-toggle.on svg { display: block; }
+
+  .day-label {
+    font-size: 13px;
+    font-weight: 600;
+    font-family: var(--mono);
+    min-width: 44px;
+  }
+  .day-api {
+    font-size: 10px;
+    color: var(--text-muted);
+    font-family: var(--mono);
+  }
+  .day-times {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+  }
+  .day-times select {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    padding: 6px 8px;
+    font-size: 13px;
+    font-family: var(--mono);
+    outline: none;
+    min-width: 108px;
+    cursor: pointer;
+  }
+  .day-times select:focus {
+    border-color: var(--accent);
+  }
+  .day-times span { color: var(--text-muted); font-size: 12px; }
+  .day-closed {
+    font-size: 11px;
+    color: var(--danger);
+    font-weight: 600;
+    font-style: italic;
+    letter-spacing: 0.5px;
+  }
+
+  /* ── Buttons ── */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 18px;
+    font-size: 13px;
+    font-weight: 600;
+    font-family: var(--sans);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { background: #2563eb; }
+  .btn-outline {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+  }
+  .btn-outline:hover { border-color: var(--text-muted); color: var(--text); }
+  .btn-success { background: var(--success); color: #fff; }
+  .btn-success:hover { background: #16a34a; }
+  .btn-danger-outline {
+    background: transparent;
+    border: 1px solid rgba(239,68,68,0.3);
+    color: var(--danger);
+  }
+  .btn-danger-outline:hover { background: var(--danger-bg); }
+  .btn-sm { padding: 7px 12px; font-size: 12px; }
+
+  .btn-add {
+    width: 100%;
+    padding: 18px;
+    background: transparent;
+    border: 2px dashed var(--border);
+    border-radius: var(--radius);
+    color: var(--text-muted);
+    font-size: 13px;
+    font-weight: 600;
+    font-family: var(--sans);
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+  .btn-add:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* ── Actions Bar ── */
+  .actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    margin-top: 16px;
+  }
+
+  /* ── JSON Preview ── */
+  .json-panel {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .json-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+  }
+  .json-header span {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-dim);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .json-body {
+    padding: 16px;
+    font-family: var(--mono);
+    font-size: 12px;
+    line-height: 1.6;
+    color: #8892a8;
+    overflow: auto;
+    max-height: 500px;
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+
+  /* ── Toast ── */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 20px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    transform: translateY(100px);
+    opacity: 0;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    z-index: 100;
+  }
+  .toast.show { transform: translateY(0); opacity: 1; }
+  .toast .dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--success);
+    flex-shrink: 0;
+  }
+
+  /* ── Tabs ── */
+  .tabs {
+    display: flex;
+    gap: 0;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 24px;
+  }
+  .tab {
+    padding: 12px 20px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-muted);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.15s;
+    background: transparent;
+    border-top: none;
+    border-left: none;
+    border-right: none;
+    font-family: var(--sans);
+  }
+  .tab:hover { color: var(--text-dim); }
+  .tab.active { color: var(--text); border-bottom-color: var(--accent); }
+
+  /* ── Chevron ── */
+  .chevron {
+    transition: transform 0.2s;
+    color: var(--text-muted);
+  }
+  .chevron.open { transform: rotate(90deg); }
+
+  /* ── Responsive ── */
+  @media (max-width: 600px) {
+    .row-2 { grid-template-columns: 1fr; }
+    .day-row { flex-wrap: wrap; }
+    .day-times { width: 100%; margin-top: 4px; }
+    .shell { padding: 0 16px 60px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="shell">
+  <header>
+    <h1>WxCC Business Hours</h1>
+    <p>Edit schedules and download the JSON for your Webex Contact Center flow</p>
+  </header>
+
+  <div class="tabs" id="tabs">
+    <button class="tab active" data-tab="editor">Editor</button>
+    <button class="tab" data-tab="json">JSON Output</button>
+  </div>
+
+  <div id="editor-tab"></div>
+  <div id="json-tab" style="display:none"></div>
+</div>
+
+<div class="toast" id="toast"><div class="dot"></div><span id="toast-msg"></span></div>
+
+<script>
+const BH_ID = "7fd288d2-71e7-4d58-ba8a-067406e85adc";
+
+const DAYS = ["monday","tuesday","wednesday","thursday","friday","saturday","sunday"];
+const DAY_LABELS = {monday:"Mon",tuesday:"Tue",wednesday:"Wed",thursday:"Thu",friday:"Fri",saturday:"Sat",sunday:"Sun"};
+const DAY_API = {monday:"MON",tuesday:"TUE",wednesday:"WED",thursday:"THU",friday:"FRI",saturday:"SAT",sunday:"SUN"};
+
+const TIMEZONES = [
+  "America/Chicago","America/New_York","America/Denver","America/Los_Angeles",
+  "America/Phoenix","America/Anchorage","Pacific/Honolulu",
+  "America/Indiana/Indianapolis","America/Detroit","America/Boise",
+  "Europe/London","Europe/Paris","Europe/Berlin",
+  "Asia/Tokyo","Asia/Shanghai","Asia/Kolkata",
+  "Australia/Sydney","Pacific/Auckland"
+];
+
+const DEFAULT_SCHEDULE = {
+  monday:{enabled:true,start:"08:00",end:"16:00"},
+  tuesday:{enabled:true,start:"08:00",end:"16:00"},
+  wednesday:{enabled:true,start:"08:00",end:"16:00"},
+  thursday:{enabled:true,start:"08:00",end:"16:00"},
+  friday:{enabled:true,start:"09:00",end:"13:00"},
+  saturday:{enabled:false,start:"09:00",end:"17:00"},
+  sunday:{enabled:false,start:"09:00",end:"17:00"},
+};
+
+let schedules = [{
+  id: "s_" + Math.random().toString(36).substr(2,6),
+  name: "API-Hours",
+  description: "Monday thru Friday Open Hours",
+  timezone: "America/Chicago",
+  days: JSON.parse(JSON.stringify(DEFAULT_SCHEDULE)),
+  expanded: true,
+}];
+
+// ── Helpers ──
+function genTimes() {
+  const o = [];
+  for (let h=0;h<24;h++) for (let m=0;m<60;m+=15) {
+    const v = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+    const ampm = h>=12?'PM':'AM';
+    const h12 = h%12||12;
+    o.push({v, label:`${h12}:${String(m).padStart(2,'0')} ${ampm}`});
+  }
+  return o;
+}
+const TIMES = genTimes();
+
+function timeOpts(selected) {
+  return TIMES.map(t => `<option value="${t.v}" ${t.v===selected?'selected':''}>${t.label}</option>`).join('');
+}
+
+function tzOpts(selected) {
+  return TIMEZONES.map(tz => `<option value="${tz}" ${tz===selected?'selected':''}>${tz}</option>`).join('');
+}
+
+function buildWorkingHours(days) {
+  const map = [];
+  DAYS.forEach(d => {
+    const s = days[d];
+    if (!s.enabled) return;
+    const ex = map.find(x => x.start===s.start && x.end===s.end);
+    if (ex) ex.days.push(DAY_API[d]);
+    else map.push({start:s.start, end:s.end, days:[DAY_API[d]]});
+  });
+  return map.map((sh,i) => ({name:`Shift-${i+1}`, days:sh.days, startTime:sh.start, endTime:sh.end}));
+}
+
+function buildJSON() {
+  const s = schedules[0];
+  return {
+    id: BH_ID,
+    name: s.name,
+    description: s.description,
+    timezone: s.timezone,
+    workingHours: buildWorkingHours(s.days),
+  };
+}
+
+function isOpen(days, tz) {
+  try {
+    const f = new Intl.DateTimeFormat('en-US',{timeZone:tz,weekday:'long',hour:'2-digit',minute:'2-digit',hour12:false});
+    const p = f.formatToParts(new Date());
+    const wd = p.find(x=>x.type==='weekday')?.value?.toLowerCase();
+    const ct = `${p.find(x=>x.type==='hour')?.value}:${p.find(x=>x.type==='minute')?.value}`;
+    if (!wd||!days[wd]) return false;
+    const d = days[wd];
+    return d.enabled && ct >= d.start && ct < d.end;
+  } catch { return false; }
+}
+
+function toast(msg) {
+  const el = document.getElementById('toast');
+  document.getElementById('toast-msg').textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 2500);
+}
+
+// ── Render ──
+function render() {
+  const editorEl = document.getElementById('editor-tab');
+  let html = '';
+  schedules.forEach((s, si) => {
+    const open = isOpen(s.days, s.timezone);
+    html += `
+    <div class="card">
+      <div class="card-header" onclick="toggle(${si})">
+        <div class="card-title">
+          <svg class="chevron ${s.expanded?'open':''}" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+          <span>${s.name || 'Unnamed Schedule'}</span>
+          <span class="badge ${open?'badge-open':'badge-closed'}">${open?'OPEN':'CLOSED'}</span>
+        </div>
+        <span style="font-size:11px;color:var(--text-muted);font-family:var(--mono)">${s.timezone}</span>
+      </div>
+      ${s.expanded ? `
+      <div class="card-body">
+        <div class="divider"></div>
+        <div class="row-2">
+          <div class="field">
+            <label>Schedule Name</label>
+            <input type="text" value="${s.name}" oninput="upd(${si},'name',this.value)" placeholder="e.g. API-Hours">
+          </div>
+          <div class="field">
+            <label>Description</label>
+            <input type="text" value="${s.description||''}" oninput="upd(${si},'description',this.value)" placeholder="e.g. Weekday hours">
+          </div>
+        </div>
+        <div class="field">
+          <label>Timezone</label>
+          <select onchange="upd(${si},'timezone',this.value)">${tzOpts(s.timezone)}</select>
+        </div>
+        <div class="field">
+          <label style="margin-bottom:10px">Weekly Schedule</label>
+          ${DAYS.map(d => {
+            const dc = s.days[d];
+            return `
+            <div class="day-row ${dc.enabled?'active':'inactive'}">
+              <button class="day-toggle ${dc.enabled?'on':''}" onclick="toggleDay(${si},'${d}')">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+              </button>
+              <span class="day-label">${DAY_LABELS[d]}</span>
+              <span class="day-api">${DAY_API[d]}</span>
+              ${dc.enabled ? `
+              <div class="day-times">
+                <select onchange="updTime(${si},'${d}','start',this.value)">${timeOpts(dc.start)}</select>
+                <span>to</span>
+                <select onchange="updTime(${si},'${d}','end',this.value)">${timeOpts(dc.end)}</select>
+              </div>` : `<span class="day-closed">CLOSED</span>`}
+            </div>`;
+          }).join('')}
+        </div>
+        <div class="actions">
+          ${schedules.length > 1 ? `<button class="btn btn-danger-outline btn-sm" onclick="del(${si})">Delete</button>` : ''}
+        </div>
+      </div>` : ''}
+    </div>`;
+  });
+
+  html += `<button class="btn-add" onclick="addSchedule()">+ Add Schedule</button>`;
+
+  html += `
+  <div style="margin-top:24px;display:flex;gap:10px;justify-content:flex-end">
+    <button class="btn btn-outline" onclick="copyJSON()">Copy JSON</button>
+    <button class="btn btn-primary" onclick="downloadJSON()">Download business-hours.json</button>
+  </div>`;
+
+  editorEl.innerHTML = html;
+
+  // JSON tab
+  const jsonEl = document.getElementById('json-tab');
+  const data = buildJSON();
+  jsonEl.innerHTML = `
+    <div class="json-panel">
+      <div class="json-header">
+        <span>business-hours.json</span>
+        <button class="btn btn-sm btn-outline" onclick="copyJSON()">Copy</button>
+      </div>
+      <div class="json-body">${escHtml(JSON.stringify(data, null, 2))}</div>
+    </div>
+    <p style="margin-top:14px;font-size:12px;color:var(--text-muted)">
+      This is the exact file your WxCC flow will GET. The flow parses it with <code style="background:var(--surface);padding:2px 6px;border-radius:4px;color:var(--warning);font-family:var(--mono);font-size:11px">$</code> into a variable and passes it directly as the PUT body.
+    </p>`;
+}
+
+function escHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// ── Actions ──
+function toggle(i) { schedules[i].expanded = !schedules[i].expanded; render(); }
+function upd(i,key,val) { schedules[i][key] = val; renderJSONOnly(); }
+function toggleDay(i,d) { schedules[i].days[d].enabled = !schedules[i].days[d].enabled; render(); }
+function updTime(i,d,which,val) { schedules[i].days[d][which] = val; renderJSONOnly(); }
+
+function addSchedule() {
+  schedules.push({
+    id: "s_" + Math.random().toString(36).substr(2,6),
+    name: "New-Schedule",
+    description: "",
+    timezone: "America/Chicago",
+    days: JSON.parse(JSON.stringify(DEFAULT_SCHEDULE)),
+    expanded: true,
+  });
+  render();
+}
+
+function del(i) {
+  if (schedules.length <= 1) return;
+  schedules.splice(i, 1);
+  render();
+}
+
+function renderJSONOnly() {
+  const jsonEl = document.getElementById('json-tab');
+  if (jsonEl.style.display !== 'none') {
+    const data = buildJSON();
+    const body = jsonEl.querySelector('.json-body');
+    if (body) body.textContent = JSON.stringify(data, null, 2);
+  }
+}
+
+function copyJSON() {
+  const data = buildJSON();
+  navigator.clipboard.writeText(JSON.stringify(data, null, 2));
+  toast('JSON copied to clipboard');
+}
+
+function downloadJSON() {
+  const data = buildJSON();
+  const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'business-hours.json';
+  a.click();
+  URL.revokeObjectURL(url);
+  toast('Downloaded business-hours.json');
+}
+
+// ── Tabs ──
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    const target = tab.dataset.tab;
+    document.getElementById('editor-tab').style.display = target === 'editor' ? '' : 'none';
+    document.getElementById('json-tab').style.display = target === 'json' ? '' : 'none';
+    if (target === 'json') render();
+  });
+});
+
+// ── Init ──
+render();
+</script>
+</body>
+</html>
