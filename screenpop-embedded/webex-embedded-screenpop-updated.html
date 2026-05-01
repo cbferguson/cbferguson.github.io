@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Screen Pop — Webex Sidebar</title>
+<!-- EAF SDK v2 via CDN (unpkg) -->
+<script src="https://unpkg.com/@webex/embedded-app-sdk@latest"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,500;9..40,600;9..40,700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0f1116;
+    --bg-surface: #181b22;
+    --bg-card: #1e222c;
+    --accent: #00cf7f;
+    --accent-dim: rgba(0, 207, 127, 0.12);
+    --webex: #049fd9;
+    --webex-dim: rgba(4, 159, 217, 0.12);
+    --text: #e4e8f0;
+    --text-2: #8892a8;
+    --text-3: #555e74;
+    --border: rgba(255,255,255,0.06);
+    --danger: #ff4d6a;
+    --danger-dim: rgba(255,77,106,0.1);
+    --r: 10px;
+  }
+  body.light-theme {
+    --bg: #f5f6f8;
+    --bg-surface: #ffffff;
+    --bg-card: #eef0f4;
+    --text: #1a1a2e;
+    --text-2: #555e74;
+    --text-3: #8892a8;
+    --border: rgba(0,0,0,0.08);
+    --accent-dim: rgba(0, 207, 127, 0.1);
+    --webex-dim: rgba(4, 159, 217, 0.1);
+    --danger-dim: rgba(255, 77, 106, 0.08);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    width: 100%;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  .header {
+    padding: 14px 18px;
+    display: flex; align-items: center; gap: 10px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-surface);
+    position: sticky; top: 0; z-index: 10;
+  }
+  .header-logo {
+    width: 28px; height: 28px; border-radius: 7px;
+    background: linear-gradient(135deg, var(--webex), var(--accent));
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 12px; color: #fff;
+  }
+  .header h1 { font-size: 14px; font-weight: 600; flex: 1; }
+  .header-status {
+    font-size: 10px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.6px; padding: 3px 8px; border-radius: 4px;
+  }
+  .header-status.ready { background: var(--accent-dim); color: var(--accent); }
+  .header-status.error { background: var(--danger-dim); color: var(--danger); }
+  .header-status.loading { background: var(--webex-dim); color: var(--webex); }
+
+  .content { padding: 14px; }
+
+  .idle-state { text-align: center; padding: 48px 16px; }
+  .idle-icon {
+    width: 64px; height: 64px; border-radius: 16px; margin: 0 auto 16px;
+    background: var(--bg-card); border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center; font-size: 28px;
+  }
+  .idle-state h3 { font-size: 16px; font-weight: 600; margin-bottom: 6px; }
+  .idle-state p { font-size: 13px; color: var(--text-2); line-height: 1.5; }
+
+  .ring-state {
+    display: none; text-align: center; padding: 28px 16px;
+    animation: fadeUp 0.3s ease;
+  }
+  .ring-state.active { display: block; }
+  .ring-anim {
+    width: 72px; height: 72px; border-radius: 50%; margin: 0 auto 16px;
+    background: var(--accent-dim); display: flex; align-items: center;
+    justify-content: center; font-size: 32px;
+    animation: ring-pulse 1s ease-in-out infinite;
+    position: relative;
+  }
+  .ring-anim::before, .ring-anim::after {
+    content: ''; position: absolute; border-radius: 50%;
+    border: 2px solid var(--accent); opacity: 0;
+    animation: ripple 1.5s ease-out infinite;
+  }
+  .ring-anim::before { inset: -8px; }
+  .ring-anim::after { inset: -20px; animation-delay: 0.4s; }
+
+  @keyframes ring-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+  @keyframes ripple { 0% { opacity: 0.5; transform: scale(0.9); } 100% { opacity: 0; transform: scale(1.1); } }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+  .ring-number {
+    font-family: 'JetBrains Mono', monospace; font-size: 18px;
+    font-weight: 600; margin-bottom: 4px;
+  }
+  .ring-label { font-size: 13px; color: var(--text-2); }
+  .ring-dots { display: flex; gap: 6px; justify-content: center; margin-top: 16px; }
+  .ring-dots span {
+    width: 6px; height: 6px; border-radius: 50%; background: var(--accent);
+    animation: bounce 1.2s ease-in-out infinite;
+  }
+  .ring-dots span:nth-child(2) { animation-delay: 0.15s; }
+  .ring-dots span:nth-child(3) { animation-delay: 0.3s; }
+  @keyframes bounce {
+    0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+    40% { transform: scale(1); opacity: 1; }
+  }
+
+  .customer-card { display: none; animation: fadeUp 0.35s cubic-bezier(0.16, 1, 0.3, 1); }
+  .customer-card.active { display: block; }
+
+  .card-hero {
+    background: linear-gradient(135deg, rgba(4,159,217,0.08), rgba(0,207,127,0.06));
+    border: 1px solid var(--border); border-radius: var(--r);
+    padding: 18px; margin-bottom: 10px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .card-avatar {
+    width: 48px; height: 48px; border-radius: 12px;
+    background: linear-gradient(135deg, var(--webex), var(--accent));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; font-weight: 700; color: #fff; flex-shrink: 0;
+  }
+  .card-name { font-size: 18px; font-weight: 700; letter-spacing: -0.2px; }
+  .card-phone {
+    font-family: 'JetBrains Mono', monospace; font-size: 12px;
+    color: var(--webex); margin-top: 3px;
+  }
+  .card-badge {
+    margin-left: auto; padding: 4px 10px; border-radius: 5px;
+    font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.6px;
+  }
+  .card-badge.ok { background: var(--accent-dim); color: var(--accent); }
+
+  .card-fields { display: flex; flex-direction: column; gap: 8px; }
+  .card-field {
+    padding: 14px 16px; border-radius: var(--r);
+    background: var(--bg-card); border: 1px solid var(--border);
+  }
+  .card-field-label {
+    font-size: 10px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.8px; color: var(--text-3); margin-bottom: 6px;
+  }
+  .card-field-value { font-size: 14px; font-weight: 500; line-height: 1.4; }
+
+  .no-match-card { display: none; text-align: center; padding: 28px 16px; animation: fadeUp 0.35s ease; }
+  .no-match-card.active { display: block; }
+  .no-match-card .nm-icon { font-size: 40px; margin-bottom: 12px; opacity: 0.6; }
+  .no-match-card h3 { font-size: 16px; font-weight: 600; margin-bottom: 6px; }
+  .no-match-card p { font-size: 13px; color: var(--text-2); line-height: 1.5; }
+
+  .call-controls {
+    display: none; margin-top: 10px; padding: 12px 14px;
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: var(--r); align-items: center; justify-content: space-between;
+  }
+  .call-controls.active { display: flex; }
+  .cc-timer {
+    font-family: 'JetBrains Mono', monospace; font-size: 18px;
+    font-weight: 600; color: var(--accent); letter-spacing: 2px;
+  }
+  .cc-label {
+    font-size: 10px; color: var(--text-3); text-transform: uppercase;
+    letter-spacing: 0.8px; font-weight: 500;
+  }
+  .cc-state {
+    font-size: 11px; color: var(--text-2); text-transform: capitalize;
+    padding: 3px 8px; border-radius: 4px; background: var(--bg-surface);
+  }
+
+  /* Debug log (hidden by default, toggle with triple-click header) */
+  .debug-log {
+    display: none; margin-top: 14px; padding: 12px;
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: var(--r); max-height: 200px; overflow-y: auto;
+    font-family: 'JetBrains Mono', monospace; font-size: 11px;
+    color: var(--text-3); line-height: 1.6;
+  }
+  .debug-log.visible { display: block; }
+
+  .init-error {
+    text-align: center; padding: 40px 16px;
+  }
+  .init-error .err-icon { font-size: 40px; margin-bottom: 12px; }
+  .init-error h3 { font-size: 16px; font-weight: 600; margin-bottom: 8px; color: var(--danger); }
+  .init-error p { font-size: 13px; color: var(--text-2); line-height: 1.6; }
+  .init-error code {
+    display: block; margin-top: 12px; padding: 10px;
+    background: var(--bg-card); border-radius: 6px;
+    font-family: 'JetBrains Mono', monospace; font-size: 11px;
+    color: var(--text-3); word-break: break-all; text-align: left;
+  }
+</style>
+</head>
+<body>
+
+  <div class="header" id="appHeader">
+    <div class="header-logo">SP</div>
+    <h1>Screen Pop</h1>
+    <span class="header-status loading" id="statusBadge">Initializing...</span>
+  </div>
+
+  <div class="content">
+    <div class="idle-state" id="idleState">
+      <div class="idle-icon">📞</div>
+      <h3>Waiting for Calls</h3>
+      <p>Customer information will appear here automatically when an inbound call is detected.</p>
+    </div>
+
+    <div class="ring-state" id="ringState">
+      <div class="ring-anim">📲</div>
+      <div class="ring-number" id="ringNumber"></div>
+      <div class="ring-label">Incoming Call — Looking up...</div>
+      <div class="ring-dots"><span></span><span></span><span></span></div>
+    </div>
+
+    <div class="customer-card" id="customerCard"></div>
+
+    <div class="no-match-card" id="noMatchCard">
+      <div class="nm-icon">🔍</div>
+      <h3>Unknown Caller</h3>
+      <p id="noMatchMsg"></p>
+    </div>
+
+    <div class="call-controls" id="callControls">
+      <div>
+        <div class="cc-label">Duration</div>
+        <div class="cc-timer" id="timerDisplay">00:00</div>
+      </div>
+      <span class="cc-state" id="callState">alerting</span>
+    </div>
+
+    <!-- Debug log — triple-click the header to toggle -->
+    <div class="debug-log" id="debugLog"></div>
+
+    <div class="init-error" id="initError" style="display:none;">
+      <div class="err-icon">⚠️</div>
+      <h3>Initialization Error</h3>
+      <p id="errorMsg">Could not initialize the Webex Embedded App SDK.</p>
+      <code id="errorDetail"></code>
+    </div>
+  </div>
+
+<script>
+// ─── Configuration ───
+const CONFIG = {
+  apiUrl: 'https://67fad7058ee14a542628b6d7.mockapi.io/userDB',
+  phoneField: 'phoneNumber',
+  hiddenFields: ['pin'],
+};
+
+let eafApp = null;
+let sidebar = null;
+let currentCallId = null;
+let timer = null;
+let secs = 0;
+let badgeCount = 0;
+
+// ─── Debug Logger ───
+function debugLog(msg) {
+  console.log('[screenpop]', msg);
+  const el = document.getElementById('debugLog');
+  const time = new Date().toLocaleTimeString('en-US', { hour12: false });
+  el.innerHTML += `<div>${time} — ${msg}</div>`;
+  el.scrollTop = el.scrollHeight;
+}
+
+// Triple-click header to toggle debug log
+let clickCount = 0;
+let clickTimer = null;
+document.getElementById('appHeader').addEventListener('click', () => {
+  clickCount++;
+  clearTimeout(clickTimer);
+  clickTimer = setTimeout(() => { clickCount = 0; }, 400);
+  if (clickCount >= 3) {
+    document.getElementById('debugLog').classList.toggle('visible');
+    clickCount = 0;
+  }
+});
+
+// ─── Utilities ───
+function norm(p) { return (p || '').replace(/[^0-9]/g, '').replace(/^1(\d{10})$/, '$1'); }
+function fmt(p) {
+  const d = norm(p);
+  return d.length === 10 ? `(${d.slice(0,3)}) ${d.slice(3,6)}-${d.slice(6)}` : p;
+}
+function initials(n) { return n.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2); }
+function stripHidden(record) {
+  const safe = { ...record };
+  CONFIG.hiddenFields.forEach(f => delete safe[f]);
+  return safe;
+}
+
+// ─── UI State ───
+function setState(s) {
+  ['idleState','ringState','customerCard','noMatchCard'].forEach(id => {
+    const el = document.getElementById(id);
+    el.classList.remove('active');
+    if (id === 'idleState') el.style.display = 'none';
+  });
+  if (s === 'idle') {
+    document.getElementById('idleState').style.display = 'block';
+    document.getElementById('callControls').classList.remove('active');
+  }
+  else if (s === 'ring') document.getElementById('ringState').classList.add('active');
+  else if (s === 'match') document.getElementById('customerCard').classList.add('active');
+  else if (s === 'nomatch') document.getElementById('noMatchCard').classList.add('active');
+}
+
+function startTimer() {
+  secs = 0;
+  document.getElementById('callControls').classList.add('active');
+  clearInterval(timer);
+  timer = setInterval(() => {
+    secs++;
+    const m = String(Math.floor(secs/60)).padStart(2,'0');
+    const s = String(secs%60).padStart(2,'0');
+    document.getElementById('timerDisplay').textContent = `${m}:${s}`;
+  }, 1000);
+}
+
+function stopTimer() { clearInterval(timer); }
+
+function setStatus(type, text) {
+  const badge = document.getElementById('statusBadge');
+  badge.className = `header-status ${type}`;
+  badge.textContent = text;
+}
+
+// ─── Database Lookup ───
+async function lookupCaller(ani) {
+  const normalized = norm(ani);
+  if (!normalized) return null;
+  debugLog(`Looking up: ${normalized}`);
+
+  try {
+    const resp = await fetch(CONFIG.apiUrl);
+    const records = await resp.json();
+    const match = records.find(r => norm(r[CONFIG.phoneField] || '') === normalized);
+    debugLog(match ? `Match: ${match.name}` : 'No match found');
+    return match ? stripHidden(match) : null;
+  } catch (err) {
+    debugLog(`API error: ${err.message}`);
+    return null;
+  }
+}
+
+// ─── Call Event Handler ───
+async function handleCallEvent(call) {
+  debugLog(`Call event: ${JSON.stringify(call)}`);
+
+  const state = call.state || call.status;
+  const ani = call.callerID || call.callerId || call.remoteParty?.number || call.from?.number || '';
+  const callId = call.id || call.callId;
+
+  if (callId === currentCallId && state) {
+    document.getElementById('callState').textContent = state;
+  }
+
+  // Call ended
+  if (state === 'disconnected' || state === 'released' || state === 'ended') {
+    debugLog(`Call ended: ${callId}`);
+    currentCallId = null;
+    stopTimer();
+    setState('idle');
+    document.getElementById('idleState').style.display = 'block';
+    if (sidebar) { try { await sidebar.clearBadge(); } catch(e) {} }
+    badgeCount = 0;
+    return;
+  }
+
+  // New incoming call
+  if ((state === 'alerting' || state === 'ringing' || state === 'offered') && callId !== currentCallId) {
+    currentCallId = callId;
+    debugLog(`Incoming: ANI=${ani}, state=${state}`);
+
+    // Badge
+    if (sidebar) {
+      badgeCount++;
+      try { await sidebar.showBadge({ badgeType: 'count', count: badgeCount }); }
+      catch(e) { debugLog(`Badge error: ${e}`); }
+    }
+
+    // Ring
+    document.getElementById('ringNumber').textContent = fmt(ani);
+    setState('ring');
+    startTimer();
+    document.getElementById('callState').textContent = state;
+
+    // Lookup
+    const customer = await lookupCaller(ani);
+
+    if (customer) {
+      showCustomer(customer, ani);
+    } else {
+      document.getElementById('noMatchMsg').innerHTML =
+        `No record for <strong style="font-family:'JetBrains Mono',monospace">${fmt(ani)}</strong> in the database.`;
+      setState('nomatch');
+    }
+  }
+}
+
+// ─── Customer Card ───
+function showCustomer(c, num) {
+  document.getElementById('customerCard').innerHTML = `
+    <div class="card-hero">
+      <div class="card-avatar">${initials(c.name)}</div>
+      <div>
+        <div class="card-name">${c.name}</div>
+        <div class="card-phone">${fmt(num)}</div>
+      </div>
+      <div class="card-badge ok">Match</div>
+    </div>
+    <div class="card-fields">
+      <div class="card-field">
+        <div class="card-field-label">Account Type</div>
+        <div class="card-field-value">${c.acctName || '—'}</div>
+      </div>
+      <div class="card-field">
+        <div class="card-field-label">Address</div>
+        <div class="card-field-value">${c.addressStreet || ''}<br>${c.addressCity || ''}, ${c.addressState || ''}</div>
+      </div>
+      <div class="card-field">
+        <div class="card-field-label">Customer ID</div>
+        <div class="card-field-value" style="font-family:'JetBrains Mono',monospace">#${c.id}</div>
+      </div>
+      <div class="card-field">
+        <div class="card-field-label">Phone on File</div>
+        <div class="card-field-value" style="font-family:'JetBrains Mono',monospace">${c.phoneNumber || '—'}</div>
+      </div>
+    </div>
+  `;
+  setState('match');
+}
+
+// ─── EAF SDK Initialization ───
+// Poll for the SDK to be available, since the script tag may still be loading
+function waitForSDK(callback, maxWait) {
+  const start = Date.now();
+  const check = setInterval(() => {
+    // SDK v2 exposes window.webex (lowercase)
+    // SDK v1 exposes window.Webex (uppercase)
+    if (window.webex && window.webex.Application) {
+      clearInterval(check);
+      debugLog('SDK v2 detected (window.webex.Application)');
+      callback('v2');
+    } else if (window.Webex && window.Webex.Application) {
+      clearInterval(check);
+      debugLog('SDK v1 detected (window.Webex.Application)');
+      callback('v1');
+    } else if (Date.now() - start > (maxWait || 10000)) {
+      clearInterval(check);
+      debugLog('SDK not found after timeout');
+      callback(null);
+    }
+  }, 100);
+}
+
+async function initEAF(sdkVersion) {
+  if (!sdkVersion) {
+    setStatus('error', 'SDK Error');
+    document.getElementById('idleState').style.display = 'none';
+    document.getElementById('initError').style.display = 'block';
+    document.getElementById('errorMsg').textContent = 'The Webex Embedded App SDK did not load.';
+    document.getElementById('errorDetail').textContent =
+      'This app must run inside the Webex desktop client as a Sidebar Embedded App. ' +
+      'window.webex = ' + typeof window.webex + ', window.Webex = ' + typeof window.Webex;
+    return;
+  }
+
+  try {
+    // Create the Application object using the correct constructor for the SDK version
+    if (sdkVersion === 'v2') {
+      eafApp = new window.webex.Application();
+    } else {
+      eafApp = new window.Webex.Application();
+    }
+
+    debugLog('Waiting for onReady...');
+    await eafApp.onReady();
+    debugLog('SDK ready — app is running inside Webex');
+
+    // Theme
+    try {
+      await eafApp.listen();
+      eafApp.on('application:themeChanged', (theme) => {
+        debugLog(`Theme: ${theme}`);
+        document.body.classList.toggle('light-theme', theme === 'LIGHT');
+      });
+    } catch(e) {
+      debugLog(`Listen error: ${e}`);
+    }
+
+    if (eafApp.theme === 'LIGHT') {
+      document.body.classList.add('light-theme');
+    }
+
+    // Get sidebar context
+    try {
+      sidebar = await eafApp.getSidebar();
+      debugLog('Sidebar context acquired');
+    } catch(e) {
+      debugLog(`getSidebar error: ${e} — trying app.context.getSidebar()`);
+      try {
+        sidebar = await eafApp.context.getSidebar();
+        debugLog('Sidebar context acquired via context');
+      } catch(e2) {
+        debugLog(`context.getSidebar also failed: ${e2}`);
+      }
+    }
+
+    // Check for existing calls
+    if (sidebar) {
+      try {
+        const calls = await sidebar.getCalls();
+        debugLog(`Active calls: ${JSON.stringify(calls)}`);
+        if (calls && calls.length > 0) {
+          const alerting = calls.find(c => c.state === 'alerting' || c.state === 'ringing');
+          if (alerting) handleCallEvent(alerting);
+        }
+      } catch(e) {
+        debugLog(`getCalls error: ${e}`);
+      }
+    }
+
+    // Listen for call state changes
+    eafApp.on('sidebar:callStateChanged', (call) => {
+      debugLog('sidebar:callStateChanged fired');
+      handleCallEvent(call);
+    });
+
+    setStatus('ready', 'Ready');
+    debugLog('Listening for calls');
+
+  } catch (err) {
+    debugLog(`Init failed: ${err.message || err}`);
+    setStatus('error', 'Error');
+    document.getElementById('idleState').style.display = 'none';
+    document.getElementById('initError').style.display = 'block';
+    document.getElementById('errorMsg').textContent = 'Failed to initialize inside Webex.';
+    document.getElementById('errorDetail').textContent = `${err.message || err}\n\nSDK version: ${sdkVersion}\nwindow.webex: ${typeof window.webex}\nwindow.Webex: ${typeof window.Webex}`;
+  }
+}
+
+// ─── Boot ───
+setState('idle');
+document.getElementById('idleState').style.display = 'block';
+debugLog('Waiting for EAF SDK to load...');
+waitForSDK(initEAF);
+</script>
+</body>
+</html>
