@@ -1,0 +1,1205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Screen Pop — Webex Sidebar</title>
+  <!-- Webex Embedded App Framework SDK -->
+  <script src="https://binaries.webex.com/static-content-pipeline/webex-embedded-app/v1/webex-embedded-app-sdk.js"></script>
+  <style>
+    /* ═══════════════════════════════════════════════════════════════════
+       CSS RESET & VARIABLES
+       ═══════════════════════════════════════════════════════════════════ */
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg-primary: #0f1117;
+      --bg-card: #181a24;
+      --bg-card-alt: #1e2130;
+      --bg-input: #232638;
+      --border: #2a2d3e;
+      --border-active: #4a6cf7;
+      --text-primary: #e8eaed;
+      --text-secondary: #8b8fa3;
+      --text-muted: #5c6070;
+      --accent: #4a6cf7;
+      --accent-light: #6b8aff;
+      --accent-dim: rgba(74, 108, 247, 0.12);
+      --green: #34d399;
+      --green-dim: rgba(52, 211, 153, 0.12);
+      --amber: #fbbf24;
+      --amber-dim: rgba(251, 191, 36, 0.12);
+      --red: #f87171;
+      --red-dim: rgba(248, 113, 113, 0.12);
+      --cyan: #22d3ee;
+      --cyan-dim: rgba(34, 211, 238, 0.12);
+      --radius: 10px;
+      --radius-sm: 6px;
+      --shadow: 0 2px 12px rgba(0,0,0,0.3);
+      --font-display: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      --font-mono: 'SF Mono', 'Cascadia Code', 'Consolas', monospace;
+      --sidebar-width: 380px;
+      --transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    html, body {
+      height: 100%;
+      font-family: var(--font-display);
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      font-size: 14px;
+      line-height: 1.5;
+      overflow-x: hidden;
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════
+       LAYOUT
+       ═══════════════════════════════════════════════════════════════════ */
+    #app {
+      max-width: var(--sidebar-width);
+      margin: 0 auto;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════
+       HEADER
+       ═══════════════════════════════════════════════════════════════════ */
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg-card);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .header-logo {
+      width: 32px; height: 32px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, var(--accent), var(--accent-light));
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700; font-size: 13px; color: #fff;
+      flex-shrink: 0;
+    }
+
+    .header-title {
+      font-size: 16px;
+      font-weight: 600;
+      flex: 1;
+    }
+
+    .header-status {
+      font-size: 11px;
+      padding: 3px 8px;
+      border-radius: 20px;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .header-status::before {
+      content: '';
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    .status-ready { background: var(--green-dim); color: var(--green); }
+    .status-ready::before { background: var(--green); }
+    .status-ringing { background: var(--amber-dim); color: var(--amber); animation: pulse-badge 1s infinite; }
+    .status-ringing::before { background: var(--amber); }
+    .status-active { background: var(--cyan-dim); color: var(--cyan); }
+    .status-active::before { background: var(--cyan); }
+    .status-ended { background: var(--red-dim); color: var(--red); }
+    .status-ended::before { background: var(--red); }
+    .status-init { background: var(--accent-dim); color: var(--accent-light); }
+    .status-init::before { background: var(--accent-light); }
+
+    @keyframes pulse-badge {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.6; }
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════
+       CONTENT AREA
+       ═══════════════════════════════════════════════════════════════════ */
+    .content {
+      flex: 1;
+      padding: 16px;
+      overflow-y: auto;
+    }
+
+    /* ─── Idle State ─────────────────────────────────────────────────── */
+    .idle-state {
+      text-align: center;
+      padding: 50px 20px;
+    }
+
+    .idle-icon {
+      font-size: 48px;
+      margin-bottom: 16px;
+      opacity: 0.4;
+    }
+
+    .idle-title {
+      font-size: 17px;
+      font-weight: 600;
+      margin-bottom: 6px;
+      color: var(--text-primary);
+    }
+
+    .idle-subtitle {
+      font-size: 13px;
+      color: var(--text-secondary);
+      line-height: 1.6;
+    }
+
+    /* ─── Ringing / Lookup State ─────────────────────────────────────── */
+    .ringing-state {
+      text-align: center;
+      padding: 40px 20px;
+      animation: fadeIn 0.3s ease;
+    }
+
+    .ringing-icon {
+      font-size: 40px;
+      margin-bottom: 12px;
+      animation: ring-shake 0.5s infinite;
+    }
+
+    @keyframes ring-shake {
+      0%, 100% { transform: rotate(0deg); }
+      25% { transform: rotate(12deg); }
+      75% { transform: rotate(-12deg); }
+    }
+
+    .ringing-label {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--amber);
+      margin-bottom: 4px;
+    }
+
+    .ringing-number {
+      font-size: 13px;
+      color: var(--text-secondary);
+      font-family: var(--font-mono);
+    }
+
+    .lookup-spinner {
+      margin-top: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      color: var(--text-muted);
+      font-size: 12px;
+    }
+
+    .spinner {
+      width: 16px; height: 16px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ─── Caller Card ────────────────────────────────────────────────── */
+    .caller-card {
+      animation: slideUp 0.35s ease;
+    }
+
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    .caller-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 16px;
+      background: var(--bg-card);
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      margin-bottom: 12px;
+    }
+
+    .caller-avatar {
+      width: 48px; height: 48px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent), var(--accent-light));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px; font-weight: 700; color: #fff;
+      flex-shrink: 0;
+    }
+
+    .caller-name {
+      font-size: 18px;
+      font-weight: 700;
+      line-height: 1.3;
+    }
+
+    .caller-account-badge {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 20px;
+      margin-top: 3px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .badge-checking { background: var(--green-dim); color: var(--green); }
+    .badge-savings { background: var(--accent-dim); color: var(--accent-light); }
+    .badge-investment { background: var(--amber-dim); color: var(--amber); }
+    .badge-mortgage { background: var(--cyan-dim); color: var(--cyan); }
+    .badge-unknown { background: var(--red-dim); color: var(--red); }
+
+    /* ─── Info Grid ──────────────────────────────────────────────────── */
+    .info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .info-cell {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 10px 12px;
+    }
+
+    .info-cell.full { grid-column: 1 / -1; }
+
+    .info-label {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--text-muted);
+      margin-bottom: 3px;
+      font-weight: 600;
+    }
+
+    .info-value {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-primary);
+      word-break: break-word;
+    }
+
+    .info-value.mono {
+      font-family: var(--font-mono);
+      font-size: 13px;
+      letter-spacing: 0.5px;
+    }
+
+    .info-value.pin {
+      font-family: var(--font-mono);
+      font-size: 15px;
+      letter-spacing: 3px;
+      font-weight: 700;
+      color: var(--amber);
+    }
+
+    /* ─── Call Timer ──────────────────────────────────────────────────── */
+    .call-timer-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      margin-bottom: 12px;
+    }
+
+    .call-timer-bar.active { border-color: var(--cyan); background: var(--cyan-dim); }
+    .call-timer-bar.ended { border-color: var(--red); background: var(--red-dim); }
+
+    .timer-label {
+      font-size: 12px;
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+
+    .timer-value {
+      font-family: var(--font-mono);
+      font-size: 16px;
+      font-weight: 700;
+    }
+
+    .timer-value.active { color: var(--cyan); }
+    .timer-value.ended { color: var(--red); }
+
+    .call-ended-note {
+      text-align: center;
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 8px;
+      font-style: italic;
+    }
+
+    /* ─── Unknown Caller ─────────────────────────────────────────────── */
+    .unknown-caller {
+      text-align: center;
+      padding: 30px 20px;
+      animation: fadeIn 0.3s ease;
+    }
+
+    .unknown-icon {
+      font-size: 40px;
+      margin-bottom: 10px;
+      opacity: 0.5;
+    }
+
+    .unknown-title {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .unknown-number {
+      font-size: 13px;
+      color: var(--text-secondary);
+      font-family: var(--font-mono);
+      margin-bottom: 14px;
+    }
+
+    .back-btn {
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+      font-size: 12px;
+      padding: 6px 14px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: all var(--transition);
+    }
+
+    .back-btn:hover {
+      background: var(--border);
+      color: var(--text-primary);
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════
+       CALL HISTORY
+       ═══════════════════════════════════════════════════════════════════ */
+    .history-section {
+      margin-top: 16px;
+      border-top: 1px solid var(--border);
+      padding-top: 14px;
+    }
+
+    .history-header {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .history-count {
+      font-size: 10px;
+      background: var(--accent-dim);
+      color: var(--accent-light);
+      padding: 1px 6px;
+      border-radius: 10px;
+      font-weight: 600;
+    }
+
+    .history-list { list-style: none; }
+
+    .history-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      margin-bottom: 6px;
+      cursor: pointer;
+      transition: all var(--transition);
+    }
+
+    .history-item:hover {
+      border-color: var(--accent);
+      background: var(--bg-card-alt);
+    }
+
+    .history-avatar {
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      background: var(--bg-input);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; font-weight: 700; color: var(--accent-light);
+      flex-shrink: 0;
+    }
+
+    .history-info { flex: 1; min-width: 0; }
+
+    .history-name {
+      font-size: 13px;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .history-time {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .history-duration {
+      font-size: 11px;
+      font-family: var(--font-mono);
+      color: var(--text-secondary);
+    }
+
+    .history-empty {
+      text-align: center;
+      padding: 16px;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    /* ─── History Detail View ────────────────────────────────────────── */
+    .history-detail {
+      animation: slideUp 0.3s ease;
+    }
+
+    .history-detail-back {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 12px;
+      color: var(--accent-light);
+      cursor: pointer;
+      padding: 6px 0;
+      margin-bottom: 12px;
+      border: none;
+      background: none;
+      font-family: inherit;
+      transition: opacity var(--transition);
+    }
+
+    .history-detail-back:hover { opacity: 0.7; }
+
+    /* ═══════════════════════════════════════════════════════════════════
+       DEMO CONTROLS
+       ═══════════════════════════════════════════════════════════════════ */
+    .demo-bar {
+      padding: 10px 16px;
+      background: var(--amber-dim);
+      border-top: 1px solid rgba(251, 191, 36, 0.2);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .demo-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--amber);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .demo-btn {
+      font-size: 11px;
+      padding: 4px 10px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      background: var(--bg-card);
+      color: var(--text-primary);
+      cursor: pointer;
+      font-family: inherit;
+      font-weight: 500;
+      transition: all var(--transition);
+    }
+
+    .demo-btn:hover {
+      border-color: var(--accent);
+      background: var(--accent-dim);
+    }
+
+    .demo-btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════
+       EVENT LOG
+       ═══════════════════════════════════════════════════════════════════ */
+    .log-section {
+      border-top: 1px solid var(--border);
+      background: var(--bg-card);
+    }
+
+    .log-toggle {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 16px;
+      border: none;
+      background: none;
+      color: var(--text-secondary);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+    }
+
+    .log-toggle:hover { color: var(--text-primary); }
+
+    .log-chevron {
+      transition: transform var(--transition);
+      font-size: 10px;
+    }
+
+    .log-chevron.open { transform: rotate(180deg); }
+
+    .log-container {
+      max-height: 200px;
+      overflow-y: auto;
+      padding: 0 16px 10px;
+    }
+
+    .log-entry {
+      font-size: 11px;
+      font-family: var(--font-mono);
+      padding: 3px 0;
+      color: var(--text-muted);
+      display: flex;
+      gap: 6px;
+    }
+
+    .log-time { color: var(--text-muted); flex-shrink: 0; }
+    .log-type { font-weight: 600; flex-shrink: 0; min-width: 40px; }
+    .log-type.call { color: var(--green); }
+    .log-type.error { color: var(--red); }
+    .log-type.warn { color: var(--amber); }
+    .log-type.info { color: var(--accent-light); }
+    .log-type.auth { color: var(--cyan); }
+    .log-type.demo { color: var(--amber); }
+    .log-type.crm { color: var(--green); }
+    .log-msg { word-break: break-all; }
+
+    /* ═══════════════════════════════════════════════════════════════════
+       SCROLLBAR
+       ═══════════════════════════════════════════════════════════════════ */
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+  </style>
+</head>
+<body>
+
+<div id="app">
+  <!-- Header -->
+  <div class="header">
+    <div class="header-logo">SP</div>
+    <div class="header-title">Screen Pop</div>
+    <div class="header-status status-init" id="statusBadge">Initializing</div>
+  </div>
+
+  <!-- Main Content -->
+  <div class="content" id="mainContent">
+    <!-- Idle state (default) -->
+    <div class="idle-state" id="idleView">
+      <div class="idle-icon">📞</div>
+      <div class="idle-title">Waiting for Calls</div>
+      <div class="idle-subtitle">Customer info will appear here when an inbound call is detected.</div>
+    </div>
+
+    <!-- Ringing state -->
+    <div class="ringing-state" id="ringingView" style="display:none;">
+      <div class="ringing-icon">📲</div>
+      <div class="ringing-label">Incoming Call — Looking up...</div>
+      <div class="ringing-number" id="ringingNumber"></div>
+      <div class="lookup-spinner"><div class="spinner"></div> Searching CRM...</div>
+    </div>
+
+    <!-- Caller found -->
+    <div class="caller-card" id="callerView" style="display:none;"></div>
+
+    <!-- Unknown caller -->
+    <div class="unknown-caller" id="unknownView" style="display:none;">
+      <div class="unknown-icon">🔍</div>
+      <div class="unknown-title">Unknown Caller</div>
+      <div class="unknown-number" id="unknownNumber"></div>
+      <div id="unknownTimerBar"></div>
+      <button class="back-btn" onclick="resetToIdle()">← Back to Waiting</button>
+    </div>
+
+    <!-- History detail view -->
+    <div class="history-detail" id="historyDetailView" style="display:none;"></div>
+
+    <!-- Call History (always visible at bottom when idle) -->
+    <div class="history-section" id="historySection">
+      <div class="history-header">
+        Call History <span class="history-count" id="historyCount">0</span>
+      </div>
+      <ul class="history-list" id="historyList">
+        <li class="history-empty">No calls yet.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Demo Controls (only in browser/demo mode) -->
+  <div class="demo-bar" id="demoBar" style="display:none;">
+    <span class="demo-label">Demo</span>
+    <button class="demo-btn" id="demoCallBtn" onclick="simulateCall()">Simulate Call</button>
+    <button class="demo-btn" onclick="simulateUnknownCall()">Unknown #</button>
+  </div>
+
+  <!-- Event Log -->
+  <div class="log-section">
+    <button class="log-toggle" onclick="toggleLog()">
+      Event Log <span class="log-chevron" id="logChevron">▼</span>
+    </button>
+    <div class="log-container" id="logContainer" style="display:none;"></div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════════════
+// CONFIGURATION
+// ═══════════════════════════════════════════════════════════════════════════
+const MOCKAPI_URL = "https://67fad7058ee14a542628b6d7.mockapi.io/userDB";
+
+// ═══════════════════════════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════════════════════════
+let state = {
+  callState: "idle",       // idle | ringing | active | ended
+  caller: null,            // current caller info object
+  demoMode: false,         // true when running in browser (not inside Webex)
+  sdkReady: false,
+  callHistory: [],         // array of past call records
+  callStartTime: null,     // timestamp when call connected
+  timerInterval: null,     // interval ID for call duration timer
+  logOpen: false,
+  viewingHistory: null,    // history item being viewed, or null
+  eafApp: null,            // Webex EAF SDK app reference
+};
+
+// Contacts cache — fetched once from MockAPI
+let contactsCache = null;
+
+// ═══════════════════════════════════════════════════════════════════════════
+// UTILITY
+// ═══════════════════════════════════════════════════════════════════════════
+function logEvent(type, msg) {
+  const now = new Date();
+  const ts = now.toLocaleTimeString("en-US", { hour12: false });
+  const el = document.getElementById("logContainer");
+  const entry = document.createElement("div");
+  entry.className = "log-entry";
+  entry.innerHTML = `<span class="log-time">${ts}</span><span class="log-type ${type}">${type.toUpperCase()}</span><span class="log-msg">${escapeHtml(msg)}</span>`;
+  el.prepend(entry);
+  // Keep max 100 entries
+  while (el.children.length > 100) el.removeChild(el.lastChild);
+}
+
+function escapeHtml(str) {
+  const d = document.createElement("div");
+  d.textContent = str;
+  return d.innerHTML;
+}
+
+function formatPhone(raw) {
+  const digits = (raw || "").replace(/\D/g, "");
+  const d = digits.length === 11 && digits[0] === "1" ? digits.slice(1) : digits;
+  if (d.length === 10) return `(${d.slice(0,3)}) ${d.slice(3,6)}-${d.slice(6)}`;
+  return raw || "Unknown";
+}
+
+function normalizePhone(raw) {
+  const digits = (raw || "").replace(/\D/g, "");
+  if (digits.length === 11 && digits[0] === "1") return digits.slice(1);
+  return digits;
+}
+
+function formatDuration(ms) {
+  const secs = Math.floor(ms / 1000);
+  const m = Math.floor(secs / 60).toString().padStart(2, "0");
+  const s = (secs % 60).toString().padStart(2, "0");
+  return `${m}:${s}`;
+}
+
+function getInitials(name) {
+  if (!name) return "?";
+  return name.split(" ").map(w => w[0]).join("").toUpperCase().slice(0, 2);
+}
+
+function getBadgeClass(accountType) {
+  const t = (accountType || "").toLowerCase();
+  if (t === "checking") return "badge-checking";
+  if (t === "savings") return "badge-savings";
+  if (t === "investment") return "badge-investment";
+  if (t === "mortgage") return "badge-mortgage";
+  return "badge-unknown";
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// MOCKAPI CRM LOOKUP
+// ═══════════════════════════════════════════════════════════════════════════
+async function fetchContacts() {
+  if (contactsCache) return contactsCache;
+  try {
+    logEvent("crm", "Fetching contacts from MockAPI...");
+    const res = await fetch(MOCKAPI_URL);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    contactsCache = await res.json();
+    logEvent("crm", `Loaded ${contactsCache.length} contacts`);
+    return contactsCache;
+  } catch (err) {
+    logEvent("error", `MockAPI fetch failed: ${err.message}`);
+    return [];
+  }
+}
+
+async function lookupCaller(phoneNumber) {
+  const contacts = await fetchContacts();
+  const normalized = normalizePhone(phoneNumber);
+  if (!normalized) return null;
+
+  // Match by normalized digits
+  const match = contacts.find(c => normalizePhone(c.phoneNumber) === normalized);
+  return match || null;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// UI RENDERING
+// ═══════════════════════════════════════════════════════════════════════════
+function setStatus(label, cssClass) {
+  const el = document.getElementById("statusBadge");
+  el.textContent = label;
+  el.className = "header-status " + cssClass;
+}
+
+function showView(viewId) {
+  ["idleView", "ringingView", "callerView", "unknownView", "historyDetailView"].forEach(id => {
+    document.getElementById(id).style.display = "none";
+  });
+  // Show/hide history section (visible when idle or ended, hidden during active call views)
+  const showHistory = viewId === "idleView";
+  document.getElementById("historySection").style.display = showHistory ? "" : "none";
+
+  document.getElementById(viewId).style.display = "";
+}
+
+function renderCallerCard(caller, callState) {
+  const el = document.getElementById("callerView");
+  const address = [caller.addressStreet, caller.addressCity, caller.addressState, caller.addressZip]
+    .filter(Boolean).join(", ");
+
+  let timerHtml = "";
+  if (callState === "active") {
+    timerHtml = `<div class="call-timer-bar active">
+      <span class="timer-label">Duration</span>
+      <span class="timer-value active" id="callTimer">00:00</span>
+    </div>`;
+  } else if (callState === "ended") {
+    const dur = state.callStartTime ? formatDuration(Date.now() - state.callStartTime) : "—";
+    timerHtml = `<div class="call-timer-bar ended">
+      <span class="timer-label">Duration</span>
+      <span class="timer-value ended">${dur}</span>
+    </div>
+    <div class="call-ended-note">Call ended — clearing in 30s</div>`;
+  }
+
+  el.innerHTML = `
+    <div class="caller-header">
+      <div class="caller-avatar">${getInitials(caller.fullName)}</div>
+      <div>
+        <div class="caller-name">${escapeHtml(caller.fullName)}</div>
+        <span class="caller-account-badge ${getBadgeClass(caller.accountType)}">${escapeHtml(caller.accountType || "Unknown")}</span>
+      </div>
+    </div>
+    ${timerHtml}
+    <div class="info-grid">
+      <div class="info-cell">
+        <div class="info-label">Phone</div>
+        <div class="info-value mono">${formatPhone(caller.phoneNumber)}</div>
+      </div>
+      <div class="info-cell">
+        <div class="info-label">PIN</div>
+        <div class="info-value pin">${escapeHtml(caller.pin || "—")}</div>
+      </div>
+      <div class="info-cell full">
+        <div class="info-label">Address</div>
+        <div class="info-value">${escapeHtml(address || "—")}</div>
+      </div>
+      <div class="info-cell">
+        <div class="info-label">First Name</div>
+        <div class="info-value">${escapeHtml(caller.firstName || "—")}</div>
+      </div>
+      <div class="info-cell">
+        <div class="info-label">Last Name</div>
+        <div class="info-value">${escapeHtml(caller.lastName || "—")}</div>
+      </div>
+    </div>
+  `;
+  showView("callerView");
+}
+
+function renderHistory() {
+  const list = document.getElementById("historyList");
+  const count = document.getElementById("historyCount");
+  count.textContent = state.callHistory.length;
+
+  if (state.callHistory.length === 0) {
+    list.innerHTML = '<li class="history-empty">No calls yet.</li>';
+    return;
+  }
+
+  list.innerHTML = state.callHistory.map((h, i) => `
+    <li class="history-item" onclick="viewHistoryItem(${i})">
+      <div class="history-avatar">${getInitials(h.name)}</div>
+      <div class="history-info">
+        <div class="history-name">${escapeHtml(h.name)}</div>
+        <div class="history-time">${h.time}</div>
+      </div>
+      <div class="history-duration">${h.duration}</div>
+    </li>
+  `).join("");
+}
+
+function viewHistoryItem(index) {
+  const h = state.callHistory[index];
+  if (!h) return;
+
+  state.viewingHistory = h;
+  const el = document.getElementById("historyDetailView");
+  const address = [h.caller.addressStreet, h.caller.addressCity, h.caller.addressState, h.caller.addressZip]
+    .filter(Boolean).join(", ");
+
+  el.innerHTML = `
+    <button class="history-detail-back" onclick="closeHistoryDetail()">← Back to Call History</button>
+    <div class="caller-header">
+      <div class="caller-avatar">${getInitials(h.name)}</div>
+      <div>
+        <div class="caller-name">${escapeHtml(h.name)}</div>
+        <span class="caller-account-badge ${getBadgeClass(h.caller.accountType)}">${escapeHtml(h.caller.accountType || "Unknown")}</span>
+      </div>
+    </div>
+    <div class="call-timer-bar">
+      <span class="timer-label">Duration</span>
+      <span class="timer-value">${h.duration}</span>
+    </div>
+    <div class="info-grid">
+      <div class="info-cell">
+        <div class="info-label">Phone</div>
+        <div class="info-value mono">${formatPhone(h.caller.phoneNumber)}</div>
+      </div>
+      <div class="info-cell">
+        <div class="info-label">PIN</div>
+        <div class="info-value pin">${escapeHtml(h.caller.pin || "—")}</div>
+      </div>
+      <div class="info-cell full">
+        <div class="info-label">Address</div>
+        <div class="info-value">${escapeHtml(address || "—")}</div>
+      </div>
+      <div class="info-cell">
+        <div class="info-label">Time</div>
+        <div class="info-value">${h.time}</div>
+      </div>
+      <div class="info-cell">
+        <div class="info-label">Date</div>
+        <div class="info-value">${h.date}</div>
+      </div>
+    </div>
+  `;
+  showView("historyDetailView");
+}
+
+function closeHistoryDetail() {
+  state.viewingHistory = null;
+  showView("idleView");
+  document.getElementById("historySection").style.display = "";
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// CALL STATE MACHINE
+// ═══════════════════════════════════════════════════════════════════════════
+async function handleCallEvent(call) {
+  const callState = (call.state || call.callState || "").toString();
+  const rawPhone = call.callerID || call.callerId || call.remoteParticipants?.[0]?.callerID || call.id || "";
+
+  logEvent("call", `State: ${callState} | Caller: ${rawPhone}`);
+
+  switch (callState) {
+    case "Ringing":
+    case "Connecting": {
+      state.callState = "ringing";
+      state.caller = null;
+      state.callStartTime = null;
+      setStatus("Ringing", "status-ringing");
+
+      document.getElementById("ringingNumber").textContent = formatPhone(rawPhone);
+      showView("ringingView");
+
+      // Show badge in Webex
+      if (state.eafApp) {
+        try {
+          const sidebar = await state.eafApp.getSidebar();
+          sidebar.showBadge({ badgeType: "count", count: 1 });
+        } catch (e) { /* ignore */ }
+      }
+
+      // Lookup caller
+      const match = await lookupCaller(rawPhone);
+      if (match) {
+        state.caller = match;
+        logEvent("crm", `Found: ${match.fullName} (${match.accountType})`);
+        renderCallerCard(match, "ringing");
+        setStatus("Ringing", "status-ringing");
+      } else {
+        logEvent("warn", `No CRM match for: ${rawPhone}`);
+        document.getElementById("unknownNumber").textContent = formatPhone(rawPhone);
+        showView("unknownView");
+      }
+      break;
+    }
+
+    case "Connected": {
+      state.callState = "active";
+      state.callStartTime = Date.now();
+      setStatus("Active", "status-active");
+      logEvent("call", "Call connected");
+
+      if (state.caller) {
+        renderCallerCard(state.caller, "active");
+        // Start timer
+        clearInterval(state.timerInterval);
+        state.timerInterval = setInterval(() => {
+          const el = document.getElementById("callTimer");
+          if (el && state.callStartTime) {
+            el.textContent = formatDuration(Date.now() - state.callStartTime);
+          }
+        }, 1000);
+      }
+      break;
+    }
+
+    case "Ended":
+    case "Disconnected": {
+      state.callState = "ended";
+      setStatus("Ended", "status-ended");
+      logEvent("call", "Call ended");
+      clearInterval(state.timerInterval);
+
+      // Clear badge
+      if (state.eafApp) {
+        try {
+          const sidebar = await state.eafApp.getSidebar();
+          sidebar.clearBadge();
+        } catch (e) { /* ignore */ }
+      }
+
+      // Save to history
+      if (state.caller) {
+        const duration = state.callStartTime ? formatDuration(Date.now() - state.callStartTime) : "0:00";
+        const now = new Date();
+        state.callHistory.unshift({
+          name: state.caller.fullName,
+          duration: duration,
+          time: now.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }),
+          date: now.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
+          caller: { ...state.caller },
+        });
+        // Keep max 50 history entries
+        if (state.callHistory.length > 50) state.callHistory.pop();
+        renderHistory();
+        renderCallerCard(state.caller, "ended");
+      }
+
+      // Auto-clear after 30 seconds
+      setTimeout(() => {
+        if (state.callState === "ended") {
+          resetToIdle();
+        }
+      }, 30000);
+      break;
+    }
+
+    default:
+      logEvent("info", `Unhandled call state: ${callState}`);
+  }
+}
+
+function resetToIdle() {
+  state.callState = "idle";
+  state.caller = null;
+  state.callStartTime = null;
+  clearInterval(state.timerInterval);
+  setStatus("Ready", "status-ready");
+  showView("idleView");
+  document.getElementById("historySection").style.display = "";
+  renderHistory();
+
+  // Re-enable demo button
+  const btn = document.getElementById("demoCallBtn");
+  if (btn) btn.disabled = false;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// DEMO MODE
+// ═══════════════════════════════════════════════════════════════════════════
+async function simulateCall() {
+  const btn = document.getElementById("demoCallBtn");
+  btn.disabled = true;
+
+  // Pick a random contact from MockAPI
+  const contacts = await fetchContacts();
+  if (contacts.length === 0) {
+    logEvent("error", "No contacts loaded — cannot simulate");
+    btn.disabled = false;
+    return;
+  }
+
+  const contact = contacts[Math.floor(Math.random() * contacts.length)];
+  logEvent("demo", `Simulating call from ${contact.fullName}`);
+
+  // Ringing
+  await handleCallEvent({ state: "Ringing", callerID: contact.phoneNumber });
+
+  // Connected after 2s
+  setTimeout(() => {
+    handleCallEvent({ state: "Connected", callerID: contact.phoneNumber });
+  }, 2000);
+
+  // Ended after 8-15s
+  const duration = 8000 + Math.random() * 7000;
+  setTimeout(() => {
+    handleCallEvent({ state: "Ended", callerID: contact.phoneNumber });
+  }, 2000 + duration);
+}
+
+async function simulateUnknownCall() {
+  logEvent("demo", "Simulating unknown caller");
+  const fakeNumber = "+1555" + Math.floor(1000000 + Math.random() * 9000000);
+  await handleCallEvent({ state: "Ringing", callerID: fakeNumber });
+
+  setTimeout(() => {
+    handleCallEvent({ state: "Connected", callerID: fakeNumber });
+  }, 2000);
+
+  setTimeout(() => {
+    handleCallEvent({ state: "Ended", callerID: fakeNumber });
+  }, 7000);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// LOG TOGGLE
+// ═══════════════════════════════════════════════════════════════════════════
+function toggleLog() {
+  state.logOpen = !state.logOpen;
+  document.getElementById("logContainer").style.display = state.logOpen ? "" : "none";
+  document.getElementById("logChevron").className = "log-chevron" + (state.logOpen ? " open" : "");
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// INITIALIZATION
+// ═══════════════════════════════════════════════════════════════════════════
+async function init() {
+  logEvent("info", "Screen Pop initializing...");
+
+  // Pre-fetch contacts on load
+  fetchContacts();
+
+  // Try to initialize Webex EAF SDK
+  try {
+    const WebexApp = window.Webex && window.Webex.Application;
+    if (!WebexApp) throw new Error("EAF SDK not available");
+
+    const app = new WebexApp();
+    state.eafApp = app;
+
+    await app.onReady();
+    state.sdkReady = true;
+    logEvent("info", "EAF SDK initialized — app is ready");
+
+    await app.listen();
+    logEvent("info", "Listening for sidebar call events");
+
+    setStatus("Ready", "status-ready");
+    logEvent("info", "Screen pop active — waiting for calls");
+
+    // Listen for live call events
+    app.on("sidebar:callStateChanged", (call) => {
+      const callerId = call.callerID || call.callerId || call.callId || call.id || "unknown";
+      logEvent("call", `Event: ${call.state} | ${callerId}`);
+      handleCallEvent(call);
+    });
+
+    app.on("application:viewStateChanged", (vs) => {
+      logEvent("info", `View state: ${vs}`);
+    });
+
+    // Poll for active calls (some clients don't fire the event immediately)
+    try {
+      const sidebar = await app.getSidebar();
+      const pollCalls = async () => {
+        try {
+          const calls = await sidebar.getCalls();
+          const callList = Array.isArray(calls) ? calls : (calls?.calls || []);
+          if (callList.length > 0) {
+            logEvent("call", `Poll: found ${callList.length} active call(s)`);
+            callList.forEach(c => handleCallEvent(c));
+          }
+        } catch (e) {
+          // getCalls may not be supported — that's fine
+          if (!pollCalls._logged) {
+            logEvent("info", `getCalls(): ${e}`);
+            pollCalls._logged = true;
+          }
+        }
+      };
+      const pollInterval = setInterval(pollCalls, 3000);
+      pollCalls();
+    } catch (e) {
+      logEvent("info", `getSidebar(): ${e}`);
+    }
+
+  } catch (err) {
+    // Not inside Webex — enable demo mode
+    logEvent("info", "Not inside Webex — enabling demo mode");
+    state.demoMode = true;
+    document.getElementById("demoBar").style.display = "";
+    setStatus("Demo", "status-ready");
+    logEvent("demo", "Demo mode active — use buttons below to simulate calls");
+  }
+
+  renderHistory();
+}
+
+// Start
+init();
+</script>
+</body>
+</html>
