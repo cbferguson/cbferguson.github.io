@@ -143,7 +143,7 @@ function renderCallerCard(caller, callSt) {
     timerHtml = '<div class="call-timer-bar active"><span class="timer-label">Duration</span><span class="timer-value active" id="callTimer">00:00</span></div>';
   } else if (callSt === "ended") {
     var dur = state.callStartTime ? formatDuration(Date.now() - state.callStartTime) : "—";
-    timerHtml = '<div class="call-timer-bar ended"><span class="timer-label">Duration</span><span class="timer-value ended">' + dur + '</span></div><div class="call-ended-note">Call ended — clearing in 30s</div>';
+    timerHtml = '<div class="call-timer-bar ended"><span class="timer-label">Duration</span><span class="timer-value ended">' + dur + '</span></div><div class="call-ended-note">Call ended — clearing in 5s</div>';
   }
 
   el.innerHTML =
@@ -307,7 +307,7 @@ async function handleCallEvent(call) {
 
       setTimeout(function() {
         if (state.callState === "ended") resetToIdle();
-      }, 30000);
+      }, 5000);
       break;
     }
 
