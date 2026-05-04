@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Customer Lookup</title>
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --blue: #074A75;
+    --cyan: #00B5F0;
+    --bg: #F4F6F8;
+    --surface: #FFFFFF;
+    --border: #E5E7EB;
+    --text: #111827;
+    --text-sec: #4B5563;
+    --text-muted: #9CA3AF;
+    --row-alt: #F9FAFB;
+  }
+
+  body {
+    font-family: -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    padding: 0;
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.4;
+  }
+
+  /* Header strip */
+  .header {
+    background: var(--blue);
+    padding: 8px 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .header-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: #fff;
+    letter-spacing: 0.02em;
+  }
+  .header-badge {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--cyan);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .header-dot {
+    width: 6px;
+    height: 6px;
+    background: var(--cyan);
+    border-radius: 50%;
+    animation: pulse 2s ease infinite;
+  }
+
+  /* Customer name bar */
+  .name-bar {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    background: linear-gradient(135deg, var(--blue), var(--cyan));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 800;
+    color: #fff;
+    flex-shrink: 0;
+  }
+  .name-text {
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+
+  /* Data table */
+  .data-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--surface);
+  }
+  .data-table tr {
+    border-bottom: 1px solid var(--border);
+  }
+  .data-table tr:nth-child(even) {
+    background: var(--row-alt);
+  }
+  .data-table tr:last-child {
+    border-bottom: none;
+  }
+  .data-table td {
+    padding: 9px 14px;
+    vertical-align: top;
+  }
+  .data-table .label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    width: 110px;
+    white-space: nowrap;
+  }
+  .data-table .value {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    word-break: break-word;
+  }
+  .value .acct-badge {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--blue);
+    background: rgba(0,181,240,0.1);
+    border: 1px solid rgba(0,181,240,0.2);
+    padding: 2px 8px;
+    border-radius: 4px;
+  }
+  .value .pin-digit {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 26px;
+    background: var(--row-alt);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    font-size: 13px;
+    font-weight: 700;
+    margin-right: 3px;
+  }
+
+  /* Footer */
+  .footer {
+    padding: 6px 14px;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    font-size: 10px;
+    color: var(--text-muted);
+    display: flex;
+    justify-content: space-between;
+  }
+
+  /* Loading */
+  .loader {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 20px;
+    gap: 12px;
+  }
+  .spinner {
+    width: 28px;
+    height: 28px;
+    border: 3px solid rgba(0,181,240,0.15);
+    border-top-color: var(--cyan);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+  }
+  .loader-text {
+    font-size: 12px;
+    color: var(--text-sec);
+  }
+
+  /* Error */
+  .error {
+    text-align: center;
+    padding: 50px 20px;
+  }
+  .error-title {
+    font-size: 14px;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+  .error-msg {
+    font-size: 12px;
+    color: var(--text-sec);
+    line-height: 1.5;
+  }
+  .error-detail {
+    margin-top: 10px;
+    font-size: 11px;
+    color: var(--text-muted);
+    background: var(--row-alt);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 6px 10px;
+    display: inline-block;
+    font-family: monospace;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.3; } }
+  @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+  .fade { animation: fadeIn 0.3s ease; }
+</style>
+</head>
+<body>
+
+<div id="app">
+  <div class="loader">
+    <div class="spinner"></div>
+    <div class="loader-text">Looking up customer…</div>
+  </div>
+</div>
+
+<script>
+const API = 'https://67fad7058ee14a542628b6d7.mockapi.io/userDB';
+const app = document.getElementById('app');
+
+function getPhone() {
+  const p = new URLSearchParams(window.location.search);
+  return p.get('phoneNumber') || p.get('ANI') || p.get('ani') || '';
+}
+
+function norm(raw) {
+  const d = raw.replace(/\D/g, '');
+  if (d.length === 11 && d.startsWith('1')) return d.slice(1);
+  return d.length === 10 ? d : d;
+}
+
+function fmtPhone(d) {
+  return d.length === 10 ? '(' + d.slice(0,3) + ') ' + d.slice(3,6) + '-' + d.slice(6) : d;
+}
+
+function initials(n) {
+  return n.split(' ').map(w => w[0]).join('').toUpperCase().slice(0,2);
+}
+
+function pinHtml(pin) {
+  return pin.split('').map(c => '<span class="pin-digit">' + c + '</span>').join('');
+}
+
+function showError(title, msg, detail) {
+  app.innerHTML = '<div class="error fade">' +
+    '<div class="error-title">' + title + '</div>' +
+    '<div class="error-msg">' + msg + '</div>' +
+    (detail ? '<div class="error-detail">' + detail + '</div>' : '') +
+    '</div>';
+}
+
+function render(c) {
+  const d = norm(c.phoneNumber);
+  app.innerHTML =
+    '<div class="fade">' +
+      '<div class="header">' +
+        '<span class="header-title">C Spire</span>' +
+        '<span class="header-badge"><span class="header-dot"></span>Inbound</span>' +
+      '</div>' +
+      '<div class="name-bar">' +
+        '<div class="avatar">' + initials(c.fullName) + '</div>' +
+        '<div class="name-text">' + c.fullName + '</div>' +
+      '</div>' +
+      '<table class="data-table">' +
+        '<tr><td class="label">Account</td><td class="value"><span class="acct-badge">' + c.accountType + '</span></td></tr>' +
+        '<tr><td class="label">Phone</td><td class="value"><a href="tel:' + c.phoneNumber + '" style="color:var(--blue);text-decoration:none;border-bottom:1px dashed var(--cyan);">' + fmtPhone(d) + '</a></td></tr>' +
+        '<tr><td class="label">Address</td><td class="value">' + c.addressStreet + '<br>' + c.addressCity + ', ' + c.addressState + ' ' + c.addressZip + '</td></tr>' +
+        '<tr><td class="label">Security PIN</td><td class="value">' + pinHtml(c.pin) + '</td></tr>' +
+        '<tr><td class="label">Customer ID</td><td class="value">#' + c.id.toString().padStart(5,'0') + '</td></tr>' +
+      '</table>' +
+      '<div class="footer">' +
+        '<span>Powered by Webex Contact Center</span>' +
+        '<span>CA-' + c.id.toString().padStart(5,'0') + '</span>' +
+      '</div>' +
+    '</div>';
+}
+
+async function init() {
+  const raw = getPhone();
+  if (!raw) { showError('No Caller ID', 'No phone number provided.', '?phoneNumber=+1XXXXXXXXXX'); return; }
+  const n = norm(raw);
+  try {
+    const res = await fetch(API);
+    if (!res.ok) throw new Error('API ' + res.status);
+    const data = await res.json();
+    const match = data.find(r => norm(r.phoneNumber) === n);
+    if (match) render(match);
+    else showError('Customer Not Found', 'No matching record for this caller.', 'ANI: ' + raw + ' → ' + n);
+  } catch(e) { showError('Connection Error', 'Unable to reach database.', e.message); }
+}
+
+init();
+</script>
+</body>
+</html>
