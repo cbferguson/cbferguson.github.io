@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Agent Blended State Monitor</title>
+  <!--
+    =====================================================================
+    WxCC Custom Widget: Agent Blended State Monitor
+    =====================================================================
+    This widget replaces the stock Team Performance Widget (TPW) to show
+    a BLENDED agent state (Available, Engaged, Idle-Break, Idle-Lunch,
+    Wrap-Up, RONA, etc.) instead of just Available/Idle.
+
+    DEPLOYMENT:
+    1. Host this file on a web server accessible to your agents
+       (HTTPS required — e.g., S3 + CloudFront, Azure Blob, your own server)
+    2. Update the desktop layout JSON to point the iframe src to this URL
+    3. Upload the layout to Control Hub → Contact Center → Desktop Layouts
+
+    SDK REFERENCE:
+    Uses the @wxcc-desktop/sdk package injected by the Supervisor Desktop
+    iframe host. The SDK provides:
+      - Desktop.agentContact.addEventListener("updated", ...) 
+      - Desktop.monitoring.getMonitoredAgents()
+      - Desktop.config.getTeams()
+    =====================================================================
+  -->
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+    :root {
+      --bg-primary: #f8f9fb;
+      --bg-card: #ffffff;
+      --bg-header: #1a1d29;
+      --text-primary: #1a1d29;
+      --text-secondary: #6b7280;
+      --text-header: #ffffff;
+      --border: #e5e7eb;
+      --border-subtle: #f0f1f3;
+
+      /* State colors */
+      --state-available: #059669;
+      --state-available-bg: #ecfdf5;
+      --state-engaged: #2563eb;
+      --state-engaged-bg: #eff6ff;
+      --state-idle: #d97706;
+      --state-idle-bg: #fffbeb;
+      --state-wrapup: #7c3aed;
+      --state-wrapup-bg: #f5f3ff;
+      --state-rona: #dc2626;
+      --state-rona-bg: #fef2f2;
+      --state-offline: #6b7280;
+      --state-offline-bg: #f3f4f6;
+
+      --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+      --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+      --radius: 8px;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    /* ── Toolbar ── */
+    .toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 20px;
+      background: var(--bg-card);
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .toolbar-left {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .toolbar h1 {
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+    }
+
+    .agent-count {
+      font-size: 12px;
+      color: var(--text-secondary);
+      font-weight: 500;
+      background: var(--bg-primary);
+      padding: 4px 10px;
+      border-radius: 20px;
+    }
+
+    .search-box {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--bg-primary);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 6px 12px;
+      width: 240px;
+      transition: border-color 0.15s;
+    }
+
+    .search-box:focus-within {
+      border-color: #2563eb;
+    }
+
+    .search-box svg {
+      width: 14px;
+      height: 14px;
+      color: var(--text-secondary);
+      flex-shrink: 0;
+    }
+
+    .search-box input {
+      border: none;
+      background: transparent;
+      font-family: inherit;
+      font-size: 13px;
+      color: var(--text-primary);
+      outline: none;
+      width: 100%;
+    }
+
+    /* ── State summary chips ── */
+    .state-summary {
+      display: flex;
+      gap: 8px;
+      padding: 12px 20px;
+      border-bottom: 1px solid var(--border-subtle);
+      background: var(--bg-card);
+      flex-wrap: wrap;
+    }
+
+    .state-chip {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+      border: 1.5px solid transparent;
+    }
+
+    .state-chip:hover { opacity: 0.85; }
+
+    .state-chip.active { border-color: currentColor; }
+
+    .state-chip .dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .chip-available { background: var(--state-available-bg); color: var(--state-available); }
+    .chip-available .dot { background: var(--state-available); }
+
+    .chip-engaged { background: var(--state-engaged-bg); color: var(--state-engaged); }
+    .chip-engaged .dot { background: var(--state-engaged); }
+
+    .chip-idle { background: var(--state-idle-bg); color: var(--state-idle); }
+    .chip-idle .dot { background: var(--state-idle); }
+
+    .chip-wrapup { background: var(--state-wrapup-bg); color: var(--state-wrapup); }
+    .chip-wrapup .dot { background: var(--state-wrapup); }
+
+    .chip-rona { background: var(--state-rona-bg); color: var(--state-rona); }
+    .chip-rona .dot { background: var(--state-rona); }
+
+    /* ── Table ── */
+    .table-container {
+      padding: 0 20px 20px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+    }
+
+    thead th {
+      position: sticky;
+      top: 0;
+      background: var(--bg-header);
+      color: var(--text-header);
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: 10px 16px;
+      text-align: left;
+      white-space: nowrap;
+      z-index: 5;
+    }
+
+    thead th:first-child { border-radius: var(--radius) 0 0 0; }
+    thead th:last-child { border-radius: 0 var(--radius) 0 0; }
+
+    tbody tr {
+      border-bottom: 1px solid var(--border-subtle);
+      transition: background 0.1s;
+    }
+
+    tbody tr:hover { background: #f1f5ff; }
+
+    tbody td {
+      padding: 10px 16px;
+      vertical-align: middle;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* Column widths */
+    .col-name    { width: 20%; }
+    .col-state   { width: 20%; }
+    .col-dur     { width: 14%; }
+    .col-queue   { width: 18%; }
+    .col-contact { width: 14%; }
+    .col-team    { width: 14%; }
+
+    /* ── State badge ── */
+    .state-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .state-badge .indicator {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .state-badge.available     { background: var(--state-available-bg); color: var(--state-available); }
+    .state-badge.available .indicator { background: var(--state-available); }
+
+    .state-badge.engaged       { background: var(--state-engaged-bg); color: var(--state-engaged); }
+    .state-badge.engaged .indicator   { background: var(--state-engaged); animation: pulse 1.8s infinite; }
+
+    .state-badge.idle          { background: var(--state-idle-bg); color: var(--state-idle); }
+    .state-badge.idle .indicator      { background: var(--state-idle); }
+
+    .state-badge.wrapup        { background: var(--state-wrapup-bg); color: var(--state-wrapup); }
+    .state-badge.wrapup .indicator    { background: var(--state-wrapup); }
+
+    .state-badge.rona          { background: var(--state-rona-bg); color: var(--state-rona); }
+    .state-badge.rona .indicator      { background: var(--state-rona); }
+
+    .state-badge.offline       { background: var(--state-offline-bg); color: var(--state-offline); }
+    .state-badge.offline .indicator   { background: var(--state-offline); }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50%      { opacity: 0.5; transform: scale(1.4); }
+    }
+
+    /* ── Duration with mono font ── */
+    .duration {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-primary);
+    }
+
+    .duration.warning { color: var(--state-idle); }
+    .duration.critical { color: var(--state-rona); }
+
+    /* ── Agent name cell ── */
+    .agent-name-cell {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .agent-avatar {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 700;
+      color: white;
+      flex-shrink: 0;
+    }
+
+    .agent-details .name {
+      font-weight: 600;
+      font-size: 13px;
+    }
+
+    .agent-details .site {
+      font-size: 11px;
+      color: var(--text-secondary);
+    }
+
+    /* ── Sub-state label (Break, Lunch, etc.) ── */
+    .sub-state {
+      display: block;
+      font-size: 10px;
+      font-weight: 500;
+      opacity: 0.8;
+      margin-top: 1px;
+    }
+
+    /* ── Queue info ── */
+    .queue-info {
+      font-size: 12px;
+    }
+
+    .queue-info .queue-name {
+      font-weight: 600;
+    }
+
+    .queue-info .contact-type {
+      font-size: 11px;
+      color: var(--text-secondary);
+    }
+
+    /* ── Empty & loading states ── */
+    .empty-state, .loading-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 60px 20px;
+      color: var(--text-secondary);
+      text-align: center;
+    }
+
+    .empty-state svg, .loading-state svg {
+      width: 48px;
+      height: 48px;
+      margin-bottom: 16px;
+      opacity: 0.4;
+    }
+
+    .loading-state .spinner {
+      width: 32px;
+      height: 32px;
+      border: 3px solid var(--border);
+      border-top-color: #2563eb;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-bottom: 16px;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+  </style>
+</head>
+<body>
+
+  <!-- Toolbar -->
+  <div class="toolbar">
+    <div class="toolbar-left">
+      <h1>Agent Blended State Monitor</h1>
+      <span class="agent-count" id="agentCount">0 Agents</span>
+    </div>
+    <div class="search-box">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"/></svg>
+      <input type="text" id="searchInput" placeholder="Search agents..." />
+    </div>
+  </div>
+
+  <!-- State summary chips -->
+  <div class="state-summary" id="stateSummary"></div>
+
+  <!-- Table -->
+  <div class="table-container">
+    <table>
+      <thead>
+        <tr>
+          <th class="col-name">Agent</th>
+          <th class="col-state">Blended State</th>
+          <th class="col-dur">Duration</th>
+          <th class="col-queue">Queue</th>
+          <th class="col-contact">Contact Status</th>
+          <th class="col-team">Team</th>
+        </tr>
+      </thead>
+      <tbody id="agentTableBody">
+      </tbody>
+    </table>
+  </div>
+
+  <script>
+    // ================================================================
+    // DATA MODEL
+    // ================================================================
+    // Each agent record:
+    // {
+    //   agentId, agentName, site, team,
+    //   availabilityState: "Available" | "Idle",
+    //   idleCode: null | "Break" | "Lunch" | "Walk-In" | ...,
+    //   contactState: null | "ringing" | "connected" | "consulting" | "wrapup" | "hold",
+    //   contactQueue: null | "Sales_Q" | ...,
+    //   contactType: null | "telephony" | "chat" | "email" | ...,
+    //   stateTimestamp: Date
+    // }
+    //
+    // BLENDED STATE LOGIC:
+    //   contactState === "connected" | "consulting" | "hold"  → "Engaged"
+    //   contactState === "wrapup"                             → "Wrap-Up"
+    //   contactState === "ringing" (missed/timeout)           → "RONA"
+    //   availabilityState === "Idle" + idleCode               → "Idle - {code}"
+    //   availabilityState === "Available" + no contact        → "Available"
+    // ================================================================
+
+    let agents = [];
+    let activeFilter = null;
+    let searchTerm = "";
+
+    // ── Derive blended state ──
+    function getBlendedState(agent) {
+      const cs = (agent.contactState || "").toLowerCase();
+
+      if (["connected", "consulting", "hold"].includes(cs)) {
+        return { label: "Engaged", css: "engaged", category: "engaged" };
+      }
+      if (cs === "wrapup" || cs === "wrap-up") {
+        return { label: "Wrap-Up", css: "wrapup", category: "wrapup" };
+      }
+      if (cs === "rona") {
+        return { label: "RONA", css: "rona", category: "rona" };
+      }
+
+      if (agent.availabilityState === "Idle") {
+        const code = agent.idleCode || "Unknown";
+        return { label: `Idle — ${code}`, css: "idle", category: "idle" };
+      }
+
+      return { label: "Available", css: "available", category: "available" };
+    }
+
+    // ── Format duration ──
+    function formatDuration(timestamp) {
+      if (!timestamp) return "—";
+      const diff = Math.floor((Date.now() - new Date(timestamp).getTime()) / 1000);
+      const h = Math.floor(diff / 3600);
+      const m = Math.floor((diff % 3600) / 60);
+      const s = diff % 60;
+      const pad = n => String(n).padStart(2, "0");
+      return `${pad(h)}:${pad(m)}:${pad(s)}`;
+    }
+
+    function getDurationClass(timestamp) {
+      if (!timestamp) return "";
+      const mins = (Date.now() - new Date(timestamp).getTime()) / 60000;
+      if (mins > 30) return "critical";
+      if (mins > 15) return "warning";
+      return "";
+    }
+
+    // ── Generate avatar color from name ──
+    function avatarColor(name) {
+      const colors = [
+        "#2563eb","#059669","#d97706","#dc2626",
+        "#7c3aed","#0891b2","#be185d","#4f46e5"
+      ];
+      let hash = 0;
+      for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+      return colors[Math.abs(hash) % colors.length];
+    }
+
+    function getInitials(name) {
+      return name.split(/\s+/).map(w => w[0]).join("").substring(0, 2).toUpperCase();
+    }
+
+    // ── Render ──
+    function render() {
+      const filtered = agents.filter(a => {
+        const blended = getBlendedState(a);
+        const matchFilter = !activeFilter || blended.category === activeFilter;
+        const matchSearch = !searchTerm ||
+          a.agentName.toLowerCase().includes(searchTerm) ||
+          a.team.toLowerCase().includes(searchTerm) ||
+          blended.label.toLowerCase().includes(searchTerm);
+        return matchFilter && matchSearch;
+      });
+
+      // Update count
+      document.getElementById("agentCount").textContent = `${filtered.length} Agent${filtered.length !== 1 ? "s" : ""}`;
+
+      // State summary
+      const counts = { available: 0, engaged: 0, idle: 0, wrapup: 0, rona: 0 };
+      agents.forEach(a => { counts[getBlendedState(a).category]++; });
+
+      const summaryEl = document.getElementById("stateSummary");
+      summaryEl.innerHTML = [
+        { key: "available", label: "Available", chip: "chip-available" },
+        { key: "engaged",   label: "Engaged",   chip: "chip-engaged"  },
+        { key: "idle",      label: "Idle",       chip: "chip-idle"     },
+        { key: "wrapup",    label: "Wrap-Up",    chip: "chip-wrapup"   },
+        { key: "rona",      label: "RONA",       chip: "chip-rona"     },
+      ].map(s => `
+        <div class="state-chip ${s.chip} ${activeFilter === s.key ? 'active' : ''}"
+             onclick="toggleFilter('${s.key}')">
+          <span class="dot"></span>
+          ${s.label}: ${counts[s.key]}
+        </div>
+      `).join("");
+
+      // Table
+      const tbody = document.getElementById("agentTableBody");
+      if (filtered.length === 0) {
+        tbody.innerHTML = `
+          <tr><td colspan="6">
+            <div class="empty-state">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0" /></svg>
+              <div>No agents match the current filter</div>
+            </div>
+          </td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = filtered.map(a => {
+        const blended = getBlendedState(a);
+        const dur = formatDuration(a.stateTimestamp);
+        const durClass = getDurationClass(a.stateTimestamp);
+        const color = avatarColor(a.agentName);
+
+        return `
+          <tr>
+            <td>
+              <div class="agent-name-cell">
+                <div class="agent-avatar" style="background:${color}">${getInitials(a.agentName)}</div>
+                <div class="agent-details">
+                  <div class="name">${a.agentName}</div>
+                  <div class="site">${a.site || ""}</div>
+                </div>
+              </div>
+            </td>
+            <td>
+              <span class="state-badge ${blended.css}">
+                <span class="indicator"></span>
+                ${blended.label}
+              </span>
+            </td>
+            <td><span class="duration ${durClass}">${dur}</span></td>
+            <td>
+              <div class="queue-info">
+                <div class="queue-name">${a.contactQueue || "—"}</div>
+                <div class="contact-type">${a.contactType || ""}</div>
+              </div>
+            </td>
+            <td>${a.contactState || "—"}</td>
+            <td>${a.team}</td>
+          </tr>
+        `;
+      }).join("");
+    }
+
+    function toggleFilter(category) {
+      activeFilter = activeFilter === category ? null : category;
+      render();
+    }
+
+    // ── Search ──
+    document.getElementById("searchInput").addEventListener("input", e => {
+      searchTerm = e.target.value.toLowerCase();
+      render();
+    });
+
+    // ── Live duration ticker ──
+    setInterval(render, 1000);
+
+    // ================================================================
+    // WxCC DESKTOP SDK INTEGRATION
+    // ================================================================
+    // The SDK is injected by the Supervisor Desktop when this page loads
+    // inside the iframe. We listen for agent and contact state changes.
+    // ================================================================
+
+    async function initSDK() {
+      try {
+        // The WxCC Desktop SDK is available as window.wxcc when
+        // loaded inside the Supervisor Desktop iframe
+        if (typeof window.wxcc !== "undefined" || typeof Desktop !== "undefined") {
+          const sdk = window.wxcc || Desktop;
+
+          // Subscribe to agent state updates for monitored teams
+          sdk.monitoring.addEventListener("agent-state-change", (event) => {
+            updateAgentFromEvent(event.detail || event.data);
+          });
+
+          sdk.monitoring.addEventListener("contact-state-change", (event) => {
+            updateContactFromEvent(event.detail || event.data);
+          });
+
+          // Initial fetch of all monitored agents
+          const monitoredAgents = await sdk.monitoring.getMonitoredAgents();
+          if (monitoredAgents && monitoredAgents.data) {
+            agents = monitoredAgents.data.map(a => ({
+              agentId: a.agentId,
+              agentName: a.agentName || a.name || "Unknown",
+              site: a.siteId || a.site || "",
+              team: a.teamName || a.team || "",
+              availabilityState: a.status || a.state || "Available",
+              idleCode: a.idleCode || a.auxCodeName || null,
+              contactState: a.contactState || null,
+              contactQueue: a.queueName || null,
+              contactType: a.channelType || null,
+              stateTimestamp: a.stateChangeTimestamp || new Date().toISOString()
+            }));
+          }
+
+          render();
+          console.log("[Agent State Widget] SDK initialized, monitoring", agents.length, "agents");
+          return;
+        }
+      } catch (err) {
+        console.warn("[Agent State Widget] SDK init error:", err);
+      }
+
+      // SDK not available — show empty state, waiting for live data
+      console.log("[Agent State Widget] SDK not detected — no agents to display");
+      render();
+    }
+
+    function updateAgentFromEvent(data) {
+      const idx = agents.findIndex(a => a.agentId === data.agentId);
+      if (idx >= 0) {
+        agents[idx].availabilityState = data.status || data.state || agents[idx].availabilityState;
+        agents[idx].idleCode = data.idleCode || data.auxCodeName || null;
+        agents[idx].stateTimestamp = data.stateChangeTimestamp || new Date().toISOString();
+      } else {
+        agents.push({
+          agentId: data.agentId,
+          agentName: data.agentName || data.name || "Unknown",
+          site: data.siteId || data.site || "",
+          team: data.teamName || data.team || "",
+          availabilityState: data.status || data.state || "Available",
+          idleCode: data.idleCode || data.auxCodeName || null,
+          contactState: null,
+          contactQueue: null,
+          contactType: null,
+          stateTimestamp: data.stateChangeTimestamp || new Date().toISOString()
+        });
+      }
+      render();
+    }
+
+    function updateContactFromEvent(data) {
+      const idx = agents.findIndex(a => a.agentId === data.agentId);
+      if (idx >= 0) {
+        agents[idx].contactState = data.contactState || data.state || null;
+        agents[idx].contactQueue = data.queueName || agents[idx].contactQueue;
+        agents[idx].contactType = data.channelType || agents[idx].contactType;
+        if (data.contactState) {
+          agents[idx].stateTimestamp = new Date().toISOString();
+        }
+      }
+      render();
+    }
+
+    // Boot
+    initSDK();
+  </script>
+</body>
+</html>
