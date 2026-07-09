@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Video Player</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body {
+      width: 100%;
+      height: 100%;
+      background: #000;
+      overflow: hidden;
+    }
+    iframe {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+  </style>
+</head>
+<body>
+  <iframe
+    src="https://next.frame.io/share/e231ce39-9603-4f2c-a0e3-6bef4d88aff7/view/d392cc64-7bdb-4a94-907c-9e58b887101f?autoplay=1&muted=0"
+    allow="autoplay; fullscreen; picture-in-picture"
+    allowfullscreen
+    frameborder="0"
+  ></iframe>
+
+  <script>
+    // Request fullscreen on load
+    document.addEventListener('DOMContentLoaded', () => {
+      const el = document.documentElement;
+      if (el.requestFullscreen) el.requestFullscreen();
+      else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+    });
+
+    // Force fullscreen if user exits
+    document.addEventListener('fullscreenchange', () => {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      }
+    });
+  </script>
+</body>
+</html>
