@@ -2,61 +2,60 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-  <title>Video Player</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AlwaysBank</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-
     html, body {
       width: 100vw;
       height: 100vh;
       background: #000;
       overflow: hidden;
-      display: flex;
-      align-items: center;
-      justify-content: center;
     }
-
-    iframe {
+    video {
       position: fixed;
       top: 0; left: 0;
       width: 100vw;
       height: 100vh;
-      border: none;
-      z-index: 9999;
+      object-fit: contain;
+      background: #000;
     }
   </style>
 </head>
 <body>
-
-  <iframe
-    id="player"
-    src="https://next.frame.io/share/e231ce39-9603-4f2c-a0e3-6bef4d88aff7/view/d392cc64-7bdb-4a94-907c-9e58b887101f"
-    allow="autoplay; fullscreen; picture-in-picture; encrypted-media"
-    allowfullscreen
-    frameborder="0"
-    scrolling="no"
-  ></iframe>
+  <video
+    id="v"
+    src="https://www.22ndstatebank.com/wp-content/uploads/2026/07/AlwaysBank_Heartbeat_60_WEB.mp4"
+    autoplay
+    playsinline
+    loop
+    controls
+  ></video>
 
   <script>
-    // Request fullscreen on the iframe element immediately
+    const v = document.getElementById('v');
+
+    // Request fullscreen and play immediately
     function goFullscreen() {
-      const el = document.getElementById('player');
-      const req = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen || el.msRequestFullscreen;
-      if (req) req.call(el).catch(() => {
-        // Fall back to fullscreening the whole document
-        const doc = document.documentElement;
-        const dreq = doc.requestFullscreen || doc.webkitRequestFullscreen;
-        if (dreq) dreq.call(doc).catch(() => {});
+      const req = v.requestFullscreen || v.webkitRequestFullscreen || v.mozRequestFullScreen || v.msRequestFullscreen;
+      if (req) req.call(v).catch(() => {
+        const d = document.documentElement;
+        const dreq = d.requestFullscreen || d.webkitRequestFullscreen;
+        if (dreq) dreq.call(d).catch(() => {});
       });
     }
 
-    // Try on load
-    window.addEventListener('load', () => {
-      goFullscreen();
+    // Play and fullscreen as soon as enough data is loaded
+    v.addEventListener('canplay', () => {
+      v.play().then(() => goFullscreen()).catch(() => {
+        // If autoplay blocked, play on first user interaction
+        document.addEventListener('click', () => {
+          v.play().then(() => goFullscreen());
+        }, { once: true });
+      });
     });
 
-    // Re-request if user exits fullscreen
+    // Re-enter fullscreen if user exits
     document.addEventListener('fullscreenchange', () => {
       if (!document.fullscreenElement) goFullscreen();
     });
@@ -64,6 +63,5 @@
       if (!document.webkitFullscreenElement) goFullscreen();
     });
   </script>
-
 </body>
 </html>
