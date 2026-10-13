@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WxCC Clinic Hours Manager</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0b0e17;
+    --surface: #111625;
+    --surface2: #161b2e;
+    --border: #1e2540;
+    --text: #e1e7f0;
+    --text-dim: #5a6580;
+    --text-muted: #3d4660;
+    --accent: #3b82f6;
+    --accent-glow: rgba(59, 130, 246, 0.15);
+    --success: #22c55e;
+    --success-bg: rgba(34, 197, 94, 0.1);
+    --danger: #ef4444;
+    --danger-bg: rgba(239, 68, 68, 0.1);
+    --warning: #f59e0b;
+    --mono: 'DM Mono', 'Consolas', monospace;
+    --sans: 'DM Sans', system-ui, sans-serif;
+    --radius: 10px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: var(--sans);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .shell { max-width: 740px; margin: 0 auto; padding: 0 24px 80px; }
+
+  header {
+    padding: 32px 0 28px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 32px;
+  }
+  header h1 {
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  header h1::before {
+    content: '';
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 10px var(--accent);
+  }
+  header p { font-size: 13px; color: var(--text-dim); margin-top: 4px; }
+
+  /* ── Cards ── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin-bottom: 16px;
+    overflow: hidden;
+  }
+  .card-header {
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .card-title {
+    font-size: 15px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .card-meta { font-size: 11px; color: var(--text-muted); font-family: var(--mono); }
+  .card-body { padding: 0 20px 20px; }
+  .card-body .divider { height: 1px; background: var(--border); margin-bottom: 20px; }
+
+  .badge {
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    padding: 3px 8px;
+    border-radius: 4px;
+  }
+  .badge-open { background: var(--success-bg); color: var(--success); }
+  .badge-closed { background: var(--danger-bg); color: var(--danger); }
+
+  /* ── Form ── */
+  .field { margin-bottom: 18px; }
+  .field label {
+    display: block;
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--text-dim);
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .field input[type="text"], .field input[type="password"], .field select {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    padding: 10px 14px;
+    font-size: 14px;
+    font-family: var(--mono);
+    outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .field input:focus, .field select:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-glow);
+  }
+  .field input[readonly] { color: var(--text-dim); cursor: default; }
+  .field select { cursor: pointer; }
+  .field select option { background: var(--surface); }
+  .hint { font-size: 12px; color: var(--text-muted); margin-top: 8px; line-height: 1.5; }
+  .hint code, .note code {
+    background: var(--bg);
+    padding: 2px 6px;
+    border-radius: 4px;
+    color: var(--warning);
+    font-family: var(--mono);
+    font-size: 11px;
+  }
+  .check { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-dim); cursor: pointer; }
+  .check input { accent-color: var(--accent); width: 15px; height: 15px; }
+
+  .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+
+  /* ── Day Rows ── */
+  .day-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    border-radius: 8px;
+    transition: all 0.15s;
+    margin-bottom: 4px;
+  }
+  .day-row.active { background: rgba(59, 130, 246, 0.04); border-left: 3px solid var(--accent); }
+  .day-row.inactive { border-left: 3px solid transparent; opacity: 0.5; }
+
+  .day-toggle {
+    width: 18px; height: 18px;
+    border-radius: 4px;
+    border: 2px solid var(--text-muted);
+    background: transparent;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+    flex-shrink: 0;
+    padding: 0;
+  }
+  .day-toggle.on { border: none; background: linear-gradient(135deg, #3b82f6, #2563eb); }
+  .day-toggle svg { display: none; }
+  .day-toggle.on svg { display: block; }
+  .day-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .day-label { font-size: 13px; font-weight: 600; font-family: var(--mono); min-width: 44px; }
+  .day-api { font-size: 10px; color: var(--text-muted); font-family: var(--mono); }
+  .day-times { display: flex; align-items: center; gap: 8px; flex: 1; }
+  .day-times select {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    padding: 6px 8px;
+    font-size: 13px;
+    font-family: var(--mono);
+    outline: none;
+    min-width: 108px;
+    cursor: pointer;
+  }
+  .day-times select:focus { border-color: var(--accent); }
+  .day-times span { color: var(--text-muted); font-size: 12px; }
+  .day-closed { font-size: 11px; color: var(--danger); font-weight: 600; font-style: italic; letter-spacing: 0.5px; }
+
+  /* ── Buttons ── */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 18px;
+    font-size: 13px;
+    font-weight: 600;
+    font-family: var(--sans);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .btn:disabled { opacity: 0.5; cursor: wait; }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover:not(:disabled) { background: #2563eb; }
+  .btn-success { background: var(--success); color: #07260f; }
+  .btn-success:hover:not(:disabled) { background: #16a34a; }
+  .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text-dim); }
+  .btn-outline:hover:not(:disabled) { border-color: var(--text-muted); color: var(--text); }
+  .btn-sm { padding: 7px 12px; font-size: 12px; }
+
+  .actions { display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; margin-top: 24px; }
+
+  /* ── JSON Preview ── */
+  .json-panel {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    margin-bottom: 16px;
+  }
+  .json-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 16px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+  }
+  .json-header span {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-dim);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .json-header .btns { display: flex; gap: 8px; }
+  .json-body {
+    padding: 16px;
+    font-family: var(--mono);
+    font-size: 12px;
+    line-height: 1.6;
+    color: #8892a8;
+    overflow: auto;
+    max-height: 420px;
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+  .note { margin-top: 6px; font-size: 12px; color: var(--text-muted); line-height: 1.6; }
+
+  /* ── Status log ── */
+  .status {
+    margin-top: 16px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+    padding: 12px 16px;
+    font-family: var(--mono);
+    font-size: 12px;
+    line-height: 1.7;
+    display: none;
+  }
+  .status.show { display: block; }
+  .status .ok { color: var(--success); }
+  .status .err { color: var(--danger); }
+  .status .info { color: var(--text-dim); }
+
+  /* ── Toast ── */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 20px;
+    font-size: 13px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    transform: translateY(100px);
+    opacity: 0;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    z-index: 100;
+  }
+  .toast.show { transform: translateY(0); opacity: 1; }
+  .toast .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--success); flex-shrink: 0; }
+  .toast.error .dot { background: var(--danger); }
+
+  /* ── Tabs ── */
+  .tabs { display: flex; border-bottom: 1px solid var(--border); margin-bottom: 24px; }
+  .tab {
+    padding: 12px 20px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-muted);
+    cursor: pointer;
+    border: none;
+    border-bottom: 2px solid transparent;
+    transition: all 0.15s;
+    background: transparent;
+    font-family: var(--sans);
+  }
+  .tab:hover { color: var(--text-dim); }
+  .tab.active { color: var(--text); border-bottom-color: var(--accent); }
+  .tab:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+  @media (max-width: 600px) {
+    .row-2 { grid-template-columns: 1fr; }
+    .day-row { flex-wrap: wrap; }
+    .day-times { width: 100%; margin-top: 4px; }
+    .shell { padding: 0 16px 60px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<div class="shell">
+  <header>
+    <h1>WxCC Clinic Hours</h1>
+    <p>Pick the active location, set the weekly hours, and save both JSON files straight to GitHub</p>
+  </header>
+
+  <div class="tabs" role="tablist">
+    <button class="tab active" data-tab="editor" role="tab">Editor</button>
+    <button class="tab" data-tab="json" role="tab">JSON Output</button>
+    <button class="tab" data-tab="settings" role="tab">GitHub Settings</button>
+  </div>
+
+  <div id="editor-tab"></div>
+  <div id="json-tab" style="display:none"></div>
+  <div id="settings-tab" style="display:none"></div>
+
+  <div class="status" id="status" aria-live="polite"></div>
+</div>
+
+<div class="toast" id="toast"><div class="dot"></div><span id="toast-msg"></span></div>
+
+<script>
+/* ════════════════════════════════════════════════════════════════
+   CONFIG — edit these defaults if needed
+   ════════════════════════════════════════════════════════════════ */
+// Business Hours ID. If clinic-hours.json already exists in the repo with the
+// correct "id", the GUI picks it up on load and preserves it, so you don't have
+// to edit this constant after creating the real Business Hours object.
+const DEFAULT_BH_ID = "7fd288d2-71e7-4d58-ba8a-067406e85adc";
+const TIMEZONE = "America/Chicago";
+
+const LOCATIONS = [
+  { value: 1, label: "Main" },
+  { value: 2, label: "Clinic A" },
+  { value: 3, label: "Clinic B" },
+  { value: 4, label: "Clinic C" },
+  { value: 5, label: "Closed" },
+];
+const OPS_VAR = "ClinicOperations";
+
+const DAYS = ["monday","tuesday","wednesday","thursday","friday","saturday","sunday"];
+const DAY_LABELS = {monday:"Mon",tuesday:"Tue",wednesday:"Wed",thursday:"Thu",friday:"Fri",saturday:"Sat",sunday:"Sun"};
+const DAY_API = {monday:"MON",tuesday:"TUE",wednesday:"WED",thursday:"THU",friday:"FRI",saturday:"SAT",sunday:"SUN"};
+
+const DEFAULT_DAYS = () => ({
+  monday:{enabled:true,start:"08:00",end:"17:00"},
+  tuesday:{enabled:true,start:"08:00",end:"17:00"},
+  wednesday:{enabled:true,start:"08:00",end:"17:00"},
+  thursday:{enabled:true,start:"08:00",end:"17:00"},
+  friday:{enabled:true,start:"08:00",end:"17:00"},
+  saturday:{enabled:false,start:"09:00",end:"17:00"},
+  sunday:{enabled:false,start:"09:00",end:"17:00"},
+});
+
+/* ════════════════════════════════════════════════════════════════
+   STATE
+   ════════════════════════════════════════════════════════════════ */
+const state = {
+  id: DEFAULT_BH_ID,
+  name: "Standard_Business_Hours",
+  description: "Monday thru Friday Open Hours updated via API",
+  days: DEFAULT_DAYS(),
+  location: 1,
+};
+
+/* ── GitHub settings (stored in this browser only) ── */
+const CFG_KEY = "wxcc-hours-gh-cfg";
+const TOKEN_KEY = "wxcc-hours-gh-token";
+const cfg = Object.assign(
+  { owner: "", repo: "", branch: "main", hoursPath: "clinic-hours.json", opsPath: "clinic-operations.json", remember: false },
+  safeParse(safeGet(CFG_KEY))
+);
+let token = safeGet(TOKEN_KEY) || "";
+
+function safeGet(k){ try { return localStorage.getItem(k); } catch { return null; } }
+function safeSet(k,v){ try { localStorage.setItem(k,v); } catch {} }
+function safeDel(k){ try { localStorage.removeItem(k); } catch {} }
+function safeParse(s){ try { return s ? JSON.parse(s) : {}; } catch { return {}; } }
+
+/* ════════════════════════════════════════════════════════════════
+   HELPERS
+   ════════════════════════════════════════════════════════════════ */
+function genTimes() {
+  const o = [];
+  for (let h=0;h<24;h++) for (let m=0;m<60;m+=15) {
+    const v = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+    const ampm = h>=12?'PM':'AM';
+    const h12 = h%12||12;
+    o.push({v, label:`${h12}:${String(m).padStart(2,'0')} ${ampm}`});
+  }
+  return o;
+}
+const TIMES = genTimes();
+
+function timeOpts(selected) {
+  let opts = TIMES.map(t => `<option value="${t.v}" ${t.v===selected?'selected':''}>${t.label}</option>`).join('');
+  if (selected && !TIMES.some(t => t.v === selected)) {
+    opts = `<option value="${esc(selected)}" selected>${esc(selected)}</option>` + opts;
+  }
+  return opts;
+}
+
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function buildWorkingHours(days) {
+  const map = [];
+  DAYS.forEach(d => {
+    const s = days[d];
+    if (!s.enabled) return;
+    const ex = map.find(x => x.start===s.start && x.end===s.end);
+    if (ex) ex.days.push(DAY_API[d]);
+    else map.push({start:s.start, end:s.end, days:[DAY_API[d]]});
+  });
+  return map.map((sh,i) => ({name:`Shift-${i+1}`, days:sh.days, startTime:sh.start, endTime:sh.end}));
+}
+
+function buildHoursJSON() {
+  return {
+    id: state.id,
+    name: state.name,
+    description: state.description,
+    timezone: TIMEZONE,
+    workingHours: buildWorkingHours(state.days),
+  };
+}
+
+function buildOpsJSON() {
+  return { [OPS_VAR]: Number(state.location) };
+}
+
+const pretty = obj => JSON.stringify(obj, null, 2) + "\n";
+
+function isOpen() {
+  try {
+    const f = new Intl.DateTimeFormat('en-US',{timeZone:TIMEZONE,weekday:'long',hour:'2-digit',minute:'2-digit',hourCycle:'h23'});
+    const p = f.formatToParts(new Date());
+    const wd = p.find(x=>x.type==='weekday')?.value?.toLowerCase();
+    const ct = `${p.find(x=>x.type==='hour')?.value}:${p.find(x=>x.type==='minute')?.value}`;
+    const d = state.days[wd];
+    return !!d && d.enabled && ct >= d.start && ct < d.end;
+  } catch { return false; }
+}
+
+function toast(msg, isError) {
+  const el = document.getElementById('toast');
+  document.getElementById('toast-msg').textContent = msg;
+  el.classList.toggle('error', !!isError);
+  el.classList.add('show');
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => el.classList.remove('show'), 3000);
+}
+
+function setStatus(lines) {
+  const el = document.getElementById('status');
+  if (!lines || !lines.length) { el.classList.remove('show'); el.innerHTML = ''; return; }
+  el.innerHTML = lines.map(l => `<div class="${l.cls}">${esc(l.text)}</div>`).join('');
+  el.classList.add('show');
+}
+
+/* ════════════════════════════════════════════════════════════════
+   RENDER
+   ════════════════════════════════════════════════════════════════ */
+function render() {
+  renderEditor();
+  renderJSON();
+  renderSettings();
+}
+
+function renderEditor() {
+  const open = isOpen();
+  const loc = LOCATIONS.find(l => l.value === Number(state.location));
+  const isClosedSel = loc && loc.label === "Closed";
+
+  document.getElementById('editor-tab').innerHTML = `
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">
+          <span>Clinic Location</span>
+          <span class="badge ${isClosedSel ? 'badge-closed' : 'badge-open'}">${esc(loc ? loc.label : '')}</span>
+        </div>
+        <span class="card-meta">${OPS_VAR} = ${Number(state.location)}</span>
+      </div>
+      <div class="card-body">
+        <div class="divider"></div>
+        <div class="field" style="margin-bottom:0">
+          <label for="loc-select">Active location</label>
+          <select id="loc-select" onchange="setLocation(this.value)">
+            ${LOCATIONS.map(l => `<option value="${l.value}" ${l.value===Number(state.location)?'selected':''}>${esc(l.label)}</option>`).join('')}
+          </select>
+          <p class="hint">Saved to <code>${esc(cfg.opsPath)}</code> as <code>${OPS_VAR}</code>. Your flow reads this value and decides what each number does.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">
+          <span>${esc(state.name || 'Unnamed Schedule')}</span>
+          <span class="badge ${open?'badge-open':'badge-closed'}">${open?'Open now':'Closed now'}</span>
+        </div>
+        <span class="card-meta">${TIMEZONE}</span>
+      </div>
+      <div class="card-body">
+        <div class="divider"></div>
+        <div class="row-2">
+          <div class="field">
+            <label for="f-name">Schedule name</label>
+            <input id="f-name" type="text" value="${esc(state.name)}" oninput="updField('name',this.value)">
+          </div>
+          <div class="field">
+            <label for="f-desc">Description</label>
+            <input id="f-desc" type="text" value="${esc(state.description)}" oninput="updField('description',this.value)">
+          </div>
+        </div>
+        <div class="field">
+          <label for="f-tz">Timezone</label>
+          <input id="f-tz" type="text" value="${TIMEZONE}" readonly>
+        </div>
+        <div class="field" style="margin-bottom:0">
+          <label style="margin-bottom:10px">Weekly schedule</label>
+          ${DAYS.map(d => {
+            const dc = state.days[d];
+            return `
+            <div class="day-row ${dc.enabled?'active':'inactive'}">
+              <button class="day-toggle ${dc.enabled?'on':''}" onclick="toggleDay('${d}')" aria-label="Toggle ${DAY_LABELS[d]}" aria-pressed="${dc.enabled}">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+              </button>
+              <span class="day-label">${DAY_LABELS[d]}</span>
+              <span class="day-api">${DAY_API[d]}</span>
+              ${dc.enabled ? `
+              <div class="day-times">
+                <select aria-label="${DAY_LABELS[d]} start" onchange="updTime('${d}','start',this.value)">${timeOpts(dc.start)}</select>
+                <span>to</span>
+                <select aria-label="${DAY_LABELS[d]} end" onchange="updTime('${d}','end',this.value)">${timeOpts(dc.end)}</select>
+              </div>` : `<span class="day-closed">Closed</span>`}
+            </div>`;
+          }).join('')}
+        </div>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="btn btn-outline" id="btn-load" onclick="loadFromGitHub()">Load from GitHub</button>
+      <button class="btn btn-success" id="btn-save" onclick="saveToGitHub()">Save to GitHub</button>
+    </div>`;
+}
+
+function jsonPanel(filename, obj, key) {
+  return `
+    <div class="json-panel">
+      <div class="json-header">
+        <span>${esc(filename)}</span>
+        <div class="btns">
+          <button class="btn btn-sm btn-outline" onclick="copyJSON('${key}')">Copy</button>
+          <button class="btn btn-sm btn-outline" onclick="downloadJSON('${key}')">Download</button>
+        </div>
+      </div>
+      <div class="json-body">${esc(pretty(obj))}</div>
+    </div>`;
+}
+
+function renderJSON() {
+  document.getElementById('json-tab').innerHTML =
+    jsonPanel(cfg.hoursPath, buildHoursJSON(), 'hours') +
+    jsonPanel(cfg.opsPath, buildOpsJSON(), 'ops') +
+    `<p class="note">Your flow GETs <code>${esc(cfg.hoursPath)}</code> and passes it as the PUT body to the Business Hours API. It GETs <code>${esc(cfg.opsPath)}</code> separately and reads <code>$.${OPS_VAR}</code>. The two files are kept apart so the extra variable never ends up in the PUT body.</p>`;
+}
+
+function renderSettings() {
+  document.getElementById('settings-tab').innerHTML = `
+    <div class="card">
+      <div class="card-header"><div class="card-title">Repository</div></div>
+      <div class="card-body">
+        <div class="divider"></div>
+        <div class="row-2">
+          <div class="field">
+            <label for="s-owner">GitHub owner</label>
+            <input id="s-owner" type="text" value="${esc(cfg.owner)}" placeholder="your-username" oninput="updCfg('owner',this.value)">
+          </div>
+          <div class="field">
+            <label for="s-repo">Repository</label>
+            <input id="s-repo" type="text" value="${esc(cfg.repo)}" placeholder="wxcc-demo" oninput="updCfg('repo',this.value)">
+          </div>
+        </div>
+        <div class="row-2">
+          <div class="field">
+            <label for="s-branch">Branch</label>
+            <input id="s-branch" type="text" value="${esc(cfg.branch)}" oninput="updCfg('branch',this.value)">
+          </div>
+          <div class="field"><label>&nbsp;</label></div>
+        </div>
+        <div class="row-2">
+          <div class="field">
+            <label for="s-hpath">Hours file path</label>
+            <input id="s-hpath" type="text" value="${esc(cfg.hoursPath)}" oninput="updCfg('hoursPath',this.value)">
+          </div>
+          <div class="field">
+            <label for="s-opath">Location file path</label>
+            <input id="s-opath" type="text" value="${esc(cfg.opsPath)}" oninput="updCfg('opsPath',this.value)">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><div class="card-title">Access token</div></div>
+      <div class="card-body">
+        <div class="divider"></div>
+        <div class="field">
+          <label for="s-token">Personal access token</label>
+          <input id="s-token" type="password" value="${esc(token)}" placeholder="github_pat_..." autocomplete="off" oninput="updToken(this.value)">
+          <p class="hint">Use a fine-grained token limited to this one repository with <code>Contents: Read and write</code>. It is sent only to api.github.com. Never paste it into the HTML file or commit it to the repo.</p>
+        </div>
+        <label class="check">
+          <input type="checkbox" ${cfg.remember?'checked':''} onchange="updRemember(this.checked)">
+          Remember the token in this browser
+        </label>
+      </div>
+    </div>`;
+}
+
+/* ════════════════════════════════════════════════════════════════
+   ACTIONS
+   ════════════════════════════════════════════════════════════════ */
+function setLocation(v) { state.location = Number(v); render(); }
+function updField(key, val) { state[key] = val; renderJSON(); }
+function toggleDay(d) { state.days[d].enabled = !state.days[d].enabled; render(); }
+function updTime(d, which, val) { state.days[d][which] = val; render(); }
+
+function updCfg(key, val) {
+  cfg[key] = val.trim();
+  persistCfg();
+  renderJSON();
+}
+function updToken(val) { token = val.trim(); persistToken(); }
+function updRemember(on) { cfg.remember = on; persistCfg(); persistToken(); }
+function persistCfg() { safeSet(CFG_KEY, JSON.stringify(cfg)); }
+function persistToken() { if (cfg.remember && token) safeSet(TOKEN_KEY, token); else safeDel(TOKEN_KEY); }
+
+function getJSONFor(key) {
+  return key === 'hours'
+    ? { name: cfg.hoursPath, text: pretty(buildHoursJSON()) }
+    : { name: cfg.opsPath, text: pretty(buildOpsJSON()) };
+}
+
+function copyJSON(key) {
+  navigator.clipboard.writeText(getJSONFor(key).text);
+  toast('JSON copied to clipboard');
+}
+
+function downloadJSON(key) {
+  const f = getJSONFor(key);
+  const blob = new Blob([f.text], {type: 'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = f.name.split('/').pop();
+  a.click();
+  URL.revokeObjectURL(url);
+  toast('Downloaded ' + a.download);
+}
+
+/* ════════════════════════════════════════════════════════════════
+   GITHUB API
+   ════════════════════════════════════════════════════════════════ */
+function toB64(str) {
+  const bytes = new TextEncoder().encode(str);
+  let bin = '';
+  bytes.forEach(b => bin += String.fromCharCode(b));
+  return btoa(bin);
+}
+function fromB64(b64) {
+  const bin = atob(b64.replace(/\n/g, ''));
+  const bytes = Uint8Array.from(bin, c => c.charCodeAt(0));
+  return new TextDecoder().decode(bytes);
+}
+
+function ghReady() {
+  if (!cfg.owner || !cfg.repo || !cfg.branch) {
+    toast('Add owner, repo and branch in GitHub Settings', true);
+    setStatus([{cls:'err', text:'GitHub Settings are incomplete. Fill in the owner, repository and branch.'}]);
+    return false;
+  }
+  return true;
+}
+
+function ghHeaders(json) {
+  const h = { 'Accept': 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28' };
+  if (token) h['Authorization'] = 'Bearer ' + token;
+  if (json) h['Content-Type'] = 'application/json';
+  return h;
+}
+
+function ghUrl(path) {
+  const p = path.split('/').map(encodeURIComponent).join('/');
+  return `https://api.github.com/repos/${encodeURIComponent(cfg.owner)}/${encodeURIComponent(cfg.repo)}/contents/${p}`;
+}
+
+async function ghErr(r) {
+  let msg = '';
+  try { msg = (await r.json()).message || ''; } catch {}
+  if (r.status === 401) return 'HTTP 401: token is missing, expired or invalid';
+  if (r.status === 403) return 'HTTP 403: token lacks write access or rate limit hit' + (msg ? ` (${msg})` : '');
+  if (r.status === 404) return 'HTTP 404: repo, branch or token access not found';
+  return `HTTP ${r.status}${msg ? ': ' + msg : ''}`;
+}
+
+// Returns { sha, text } or null if the file does not exist yet.
+async function ghGetFile(path) {
+  const r = await fetch(`${ghUrl(path)}?ref=${encodeURIComponent(cfg.branch)}&_=${Date.now()}`, {
+    headers: ghHeaders(false), cache: 'no-store'
+  });
+  if (r.status === 404) return null;
+  if (!r.ok) throw new Error(await ghErr(r));
+  const j = await r.json();
+  return { sha: j.sha, text: fromB64(j.content) };
+}
+
+// Creates or updates a file. Returns "created" | "updated" | "unchanged".
+async function ghPutFile(path, text, message) {
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const existing = await ghGetFile(path);
+    if (existing && existing.text === text) return 'unchanged';
+    const body = { message, content: toB64(text), branch: cfg.branch };
+    if (existing) body.sha = existing.sha;
+    const r = await fetch(ghUrl(path), { method: 'PUT', headers: ghHeaders(true), body: JSON.stringify(body) });
+    if (r.ok) return existing ? 'updated' : 'created';
+    if ((r.status === 409 || r.status === 422) && attempt === 0) continue; // stale sha, refetch once
+    throw new Error(await ghErr(r));
+  }
+}
+
+function busy(on) {
+  ['btn-save','btn-load'].forEach(id => { const b = document.getElementById(id); if (b) b.disabled = on; });
+}
+
+async function saveToGitHub() {
+  if (!ghReady()) return;
+  if (!token) {
+    toast('Add a token in GitHub Settings first', true);
+    setStatus([{cls:'err', text:'No access token set. Add one under GitHub Settings.'}]);
+    return;
+  }
+  busy(true);
+  const log = [{cls:'info', text:`Saving to ${cfg.owner}/${cfg.repo}@${cfg.branch} ...`}];
+  setStatus(log);
+  const stamp = new Date().toISOString();
+  const files = [
+    { path: cfg.hoursPath, text: pretty(buildHoursJSON()), msg: `Update business hours via GUI (${stamp})` },
+    { path: cfg.opsPath,   text: pretty(buildOpsJSON()),   msg: `Update ${OPS_VAR} to ${state.location} via GUI (${stamp})` },
+  ];
+  let failed = false;
+  for (const f of files) {
+    try {
+      const res = await ghPutFile(f.path, f.text, f.msg);
+      log.push({cls:'ok', text:`${f.path}: ${res}`});
+    } catch (e) {
+      failed = true;
+      log.push({cls:'err', text:`${f.path}: ${e.message}`});
+    }
+    setStatus(log);
+  }
+  busy(false);
+  toast(failed ? 'Save finished with errors' : 'Saved to GitHub', failed);
+}
+
+async function loadFromGitHub(silent) {
+  if (!ghReady()) return;
+  busy(true);
+  const log = [{cls:'info', text:`Loading from ${cfg.owner}/${cfg.repo}@${cfg.branch} ...`}];
+  if (!silent) setStatus(log);
+  try {
+    const h = await ghGetFile(cfg.hoursPath);
+    if (h) {
+      const j = JSON.parse(h.text);
+      state.id = j.id || state.id;
+      state.name = j.name || state.name;
+      state.description = j.description ?? state.description;
+      DAYS.forEach(d => state.days[d].enabled = false);
+      (j.workingHours || []).forEach(sh => (sh.days || []).forEach(a => {
+        const d = DAYS.find(x => DAY_API[x] === a);
+        if (d) state.days[d] = { enabled: true, start: sh.startTime, end: sh.endTime };
+      }));
+      log.push({cls:'ok', text:`${cfg.hoursPath}: loaded`});
+    } else {
+      log.push({cls:'info', text:`${cfg.hoursPath}: not found yet, will be created on save`});
+    }
+    const o = await ghGetFile(cfg.opsPath);
+    if (o) {
+      const v = Number(JSON.parse(o.text)[OPS_VAR]);
+      if (LOCATIONS.some(l => l.value === v)) state.location = v;
+      log.push({cls:'ok', text:`${cfg.opsPath}: loaded (${OPS_VAR} = ${state.location})`});
+    } else {
+      log.push({cls:'info', text:`${cfg.opsPath}: not found yet, will be created on save`});
+    }
+    render();
+    setStatus(log);
+    if (!silent) toast('Loaded current settings from GitHub');
+  } catch (e) {
+    log.push({cls:'err', text: e.message});
+    setStatus(log);
+    if (!silent) toast('Load failed', true);
+  }
+  busy(false);
+}
+
+/* ════════════════════════════════════════════════════════════════
+   TABS + INIT
+   ════════════════════════════════════════════════════════════════ */
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    ['editor','json','settings'].forEach(n => {
+      document.getElementById(n + '-tab').style.display = tab.dataset.tab === n ? '' : 'none';
+    });
+    if (tab.dataset.tab === 'json') renderJSON();
+  });
+});
+
+render();
+if (cfg.owner && cfg.repo) loadFromGitHub(true); // pull the current live values on open
+</script>
+</body>
+</html>
