@@ -1,7 +1,7 @@
 {
   "id": "7fd288d2-71e7-4d58-ba8a-067406e85adc",
   "name": "Standard_Business_Hours",
-  "description": "Monday thru Friday Open Hours updated via API",
+  "description": "Monday thru Friday Open Hours",
   "timezone": "America/Chicago",
   "workingHours": [
     {
@@ -15,12 +15,34 @@
     {
       "name": "Shift-2",
       "days": [
-        "TUE",
-        "WED",
-        "FRI"
+        "TUE"
+      ],
+      "startTime": "10:00",
+      "endTime": "17:00"
+    },
+    {
+      "name": "Shift-3",
+      "days": [
+        "WED"
+      ],
+      "startTime": "07:00",
+      "endTime": "19:00"
+    },
+    {
+      "name": "Shift-4",
+      "days": [
+        "THU"
       ],
       "startTime": "08:00",
       "endTime": "17:00"
+    },
+    {
+      "name": "Shift-5",
+      "days": [
+        "FRI"
+      ],
+      "startTime": "10:30",
+      "endTime": "16:00"
     }
   ]
 }
