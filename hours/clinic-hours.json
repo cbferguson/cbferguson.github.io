@@ -1,0 +1,20 @@
+{
+  "id": "7fd288d2-71e7-4d58-ba8a-067406e85adc",
+  "name": "Standard_Business_Hours",
+  "description": "Monday thru Friday Open Hours updated via API",
+  "timezone": "America/Chicago",
+  "workingHours": [
+    {
+      "name": "Shift-1",
+      "days": [
+        "MON",
+        "TUE",
+        "WED",
+        "THU",
+        "FRI"
+      ],
+      "startTime": "08:00",
+      "endTime": "17:00"
+    }
+  ]
+}
