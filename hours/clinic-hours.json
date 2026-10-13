@@ -7,7 +7,14 @@
     {
       "name": "Shift-1",
       "days": [
-        "MON",
+        "MON"
+      ],
+      "startTime": "10:00",
+      "endTime": "14:00"
+    },
+    {
+      "name": "Shift-2",
+      "days": [
         "TUE",
         "WED",
         "THU",
